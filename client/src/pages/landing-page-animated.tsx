@@ -17,6 +17,7 @@ import communityAnimation from "@/assets/animations/community.json";
 
 // Import new components
 import RocketAnimation from "@/components/landing/rocket-animation";
+import HackathonSection from "@/components/landing/hackathon-section";
 import { ParallaxContainer, ParallaxItem, FloatingElement } from "@/components/landing/parallax-effect";
 
 // Register GSAP plugins
@@ -1746,6 +1747,7 @@ export default function LandingPageAnimated() {
         <RocketLaunchSection />
         <HowItWorksSection />
         <KeyFeaturesSection />
+        <HackathonSection />
         <FundingAnimationSection />
         <ComingSoonAppSection />
         <CallToActionSection />
