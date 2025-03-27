@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +14,8 @@ import { useTheme } from '@/context/theme-context';
 import { MoonIcon, SunIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { motion } from 'framer-motion';
+import Auth3DAnimation from '@/components/auth/auth-3d-animation';
 
 const loginSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
@@ -33,9 +35,16 @@ export default function AuthPage() {
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('login');
 
+  // Use effect for page initialization
+  useEffect(() => {
+    // Reset all animations when the component mounts
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
   // If user is already logged in, redirect to dashboard
   if (user) {
-    setLocation('/');
+    setLocation('/dashboard');
     return null;
   }
 
@@ -297,44 +306,93 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Right Column - Hero Image and Text */}
-      <div className="w-full md:w-1/2 bg-gradient-to-br from-primary-600 to-primary-800 p-12 flex items-center justify-center">
-        <div className="max-w-md text-white">
-          <h1 className="text-4xl font-bold mb-4">Connect Startups with Investors</h1>
-          <p className="text-lg mb-6">
-            StartupMatch is the premier platform for connecting promising startups with the right investors.
-            Access AI-powered recommendations, real-time analytics, and a global network of entrepreneurs and capital.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-primary-200 mt-0.5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-              </svg>
-              <div>
-                <h3 className="font-medium">AI-Powered Matching</h3>
-                <p className="text-primary-100 text-sm">Get smart recommendations based on your preferences and past investments</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-primary-200 mt-0.5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-              </svg>
-              <div>
-                <h3 className="font-medium">Secure Investments</h3>
-                <p className="text-primary-100 text-sm">Milestone-based funding with escrow protection and transparent tracking</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-primary-200 mt-0.5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-              </svg>
-              <div>
-                <h3 className="font-medium">Virtual Pitch Events</h3>
-                <p className="text-primary-100 text-sm">Attend exclusive online pitch sessions and networking opportunities</p>
-              </div>
-            </div>
-          </div>
+      {/* Right Column - 3D Animation and Text */}
+      <div className="w-full md:w-1/2 bg-gradient-to-br from-primary/40 to-primary p-0 md:p-6 flex flex-col justify-center overflow-hidden relative">
+        {/* 3D Animation Background */}
+        <div className="absolute inset-0 z-0">
+          <Auth3DAnimation />
         </div>
+        
+        {/* Content with backdrop blur for better text readability */}
+        <motion.div 
+          className="relative z-10 max-w-lg mx-auto rounded-xl bg-black/20 backdrop-blur-md p-8 text-white shadow-xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+        >
+          <motion.h1 
+            className="text-4xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+          >
+            Connect Startups with Investors
+          </motion.h1>
+          
+          <motion.p 
+            className="text-lg mb-8 leading-relaxed text-white/90"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.6 }}
+          >
+            StartupMatch is the premier platform for connecting promising startups with 
+            strategic investors. Access AI-powered recommendations, real-time analytics, 
+            and a global network of entrepreneurs and capital.
+          </motion.p>
+          
+          <div className="space-y-6">
+            <motion.div 
+              className="flex items-start space-x-4 bg-white/10 p-4 rounded-lg"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.8 }}
+            >
+              <div className="flex-shrink-0 bg-primary/70 p-2 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg">AI-Powered Matching</h3>
+                <p className="text-white/80">Get personalized recommendations based on your specific investment criteria and startup profile</p>
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="flex items-start space-x-4 bg-white/10 p-4 rounded-lg"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 1 }}
+            >
+              <div className="flex-shrink-0 bg-primary/70 p-2 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg">Secure Milestone Funding</h3>
+                <p className="text-white/80">Transparent milestone-based funding with escrow protection and real-time progress tracking</p>
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="flex items-start space-x-4 bg-white/10 p-4 rounded-lg"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 1.2 }}
+            >
+              <div className="flex-shrink-0 bg-primary/70 p-2 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg">Advanced Analytics</h3>
+                <p className="text-white/80">Comprehensive data insights for informed decision-making and performance tracking</p>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

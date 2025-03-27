@@ -1686,10 +1686,21 @@ const CallToActionSection = () => {
               >
                 <Button 
                   size="lg" 
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium w-full sm:w-auto"
+                  className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-medium w-full sm:w-auto relative overflow-hidden group"
                   onClick={() => navigate("/auth")}
                 >
-                  Create Startup Profile <FiArrowRight className="ml-2" />
+                  <span className="relative z-10">Create Startup Profile</span>
+                  <motion.div
+                    className="absolute right-4 z-10 group-hover:translate-x-1 transition-transform"
+                  >
+                    <FiArrowRight />
+                  </motion.div>
+                  <motion.div 
+                    className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: "100%" }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  />
                 </Button>
               </motion.div>
               
@@ -1702,10 +1713,21 @@ const CallToActionSection = () => {
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto group border-primary/50 hover:border-primary relative overflow-hidden"
                   onClick={() => navigate("/auth")}
                 >
-                  Start Investing <FiArrowRight className="ml-2" />
+                  <span className="relative z-10">Start Investing</span>
+                  <motion.div
+                    className="absolute right-4 z-10 group-hover:translate-x-1 transition-transform"
+                  >
+                    <FiArrowRight />
+                  </motion.div>
+                  <motion.div 
+                    className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: "100%" }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  />
                 </Button>
               </motion.div>
             </div>
@@ -1796,7 +1818,6 @@ export default function LandingPageAnimated() {
         <HowItWorksSection />
         <KeyFeaturesSection />
         <FundingAnimationSection />
-        <LivePreviewSection />
         <ComingSoonAppSection />
         <CallToActionSection />
       </main>

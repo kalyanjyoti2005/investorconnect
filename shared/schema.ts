@@ -17,7 +17,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   role: userRoleEnum("role").notNull(),
   name: text("name").notNull(),
-  bio: text("bio"),
+  bio: text("bio").default(''),
   profileImage: text("profile_image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
