@@ -15,6 +15,10 @@ import blockchainAnimation from "@/assets/animations/blockchain.json";
 import escrowAnimation from "@/assets/animations/escrow.json";
 import communityAnimation from "@/assets/animations/community.json";
 
+// Import new components
+import RocketAnimation from "@/components/landing/rocket-animation";
+import { ParallaxContainer, ParallaxItem, FloatingElement } from "@/components/landing/parallax-effect";
+
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger);
 
@@ -55,245 +59,170 @@ const pulseVariants: Variants = {
 };
 
 const RocketLaunchSection = () => {
-  const rocketRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
-  const cloudsRef = useRef<HTMLDivElement>(null);
-  const starsRef = useRef<HTMLDivElement>(null);
+  const controls = useAnimation();
+  const [ref, inView] = useInView({
+    triggerOnce: false,
+    threshold: 0.2
+  });
   
   useEffect(() => {
-    if (!rocketRef.current || !sectionRef.current || !cloudsRef.current || !starsRef.current) return;
-    
-    // Initialize GSAP animations
-    const rocket = rocketRef.current;
-    const clouds = cloudsRef.current;
-    const stars = starsRef.current;
-    
-    // Set initial positions
-    gsap.set(rocket, { y: 100, scale: 0.8 });
-    gsap.set(clouds, { y: -50, opacity: 0 });
-    gsap.set(stars, { opacity: 0 });
-    
-    // Create a timeline for the initial animation
-    const initialTimeline = gsap.timeline();
-    initialTimeline
-      .to(rocket, { y: 0, scale: 1, duration: 1.5, ease: "elastic.out(1, 0.5)" })
-      .to(clouds, { y: 0, opacity: 0.8, duration: 1, stagger: 0.2, ease: "power2.out" }, "-=1")
-      .to(stars, { opacity: 0.8, duration: 1, ease: "power2.out" }, "-=0.5");
-    
-    // Create scroll-based animation
-    gsap.to(rocket, {
-      y: -200,
-      scale: 1.1,
-      rotation: 5,
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: true,
-      }
-    });
-    
-    // Parallax effect on clouds
-    gsap.to(clouds.children, {
-      y: -30,
-      opacity: 0.3,
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: true,
-      }
-    });
-    
-    // Stars parallax effect
-    gsap.to(stars.children, {
-      y: -50,
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: true,
-      }
-    });
-    
-    return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    };
-  }, []);
-  
-  // Generate random stars
-  const starCount = 50;
-  const stars = Array.from({ length: starCount }).map((_, i) => {
-    const size = Math.random() * 4 + 1;
-    const top = Math.random() * 100;
-    const left = Math.random() * 100;
-    const delay = Math.random() * 5;
-    
-    return (
-      <div 
-        key={i}
-        className="absolute rounded-full bg-white"
-        style={{ 
-          width: `${size}px`, 
-          height: `${size}px`, 
-          top: `${top}%`, 
-          left: `${left}%`,
-          opacity: Math.random() * 0.5 + 0.3,
-          animation: `twinkle 5s infinite ${delay}s`
-        }}
-      />
-    );
-  });
+    if (inView) {
+      controls.start("visible");
+    }
+  }, [controls, inView]);
   
   return (
     <section 
       id="rocket-launch" 
       ref={sectionRef}
-      className="relative h-[60vh] overflow-hidden bg-gradient-to-b from-background via-primary/10 to-primary/5"
+      className="relative h-[70vh] overflow-hidden bg-gradient-to-b from-background via-primary/10 to-primary/5 pt-16"
     >
-      {/* Stars */}
-      <div ref={starsRef} className="absolute inset-0 z-0">
-        {stars}
-      </div>
+      {/* 3D Rocket Animation */}
+      <RocketAnimation />
       
-      {/* Clouds */}
-      <div ref={cloudsRef} className="absolute inset-0 z-10">
-        <div className="absolute top-[60%] left-[10%] w-40 h-20 bg-white/30 rounded-full blur-xl"></div>
-        <div className="absolute top-[65%] left-[30%] w-60 h-24 bg-white/20 rounded-full blur-xl"></div>
-        <div className="absolute top-[70%] left-[60%] w-40 h-16 bg-white/25 rounded-full blur-xl"></div>
-        <div className="absolute top-[75%] left-[80%] w-32 h-16 bg-white/15 rounded-full blur-xl"></div>
-      </div>
-      
-      {/* Rocket */}
-      <div className="container mx-auto px-4 h-full relative z-20 flex items-center justify-center">
-        {/* Rocket Text */}
-        <div className="absolute left-10 top-1/4 max-w-md text-left">
-          <motion.h2 
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="text-3xl md:text-4xl font-bold mb-4"
-          >
-            Launch Your Startup <span className="text-primary">To New Heights</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.7 }}
-            className="text-lg text-muted-foreground"
-          >
-            StartupMatch provides the perfect launchpad for your business ideas with access to investors, resources, and guidance
-          </motion.p>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1 }}
-          >
-            <div className="mt-6 flex gap-4">
-              <div className="bg-card border border-border rounded-lg p-3 flex items-center">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary mr-3">
-                  <FiArrowRight className="w-5 h-5" />
-                </div>
-                <div className="text-sm">
-                  <p className="font-medium">Quick Launch</p>
-                  <p className="text-muted-foreground">Setup in minutes</p>
-                </div>
-              </div>
-              
-              <div className="bg-card border border-border rounded-lg p-3 flex items-center">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary mr-3">
-                  <FiUsers className="w-5 h-5" />
-                </div>
-                <div className="text-sm">
-                  <p className="font-medium">Connect</p>
-                  <p className="text-muted-foreground">With investors</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-        
-        {/* Rocket SVG */}
-        <div ref={rocketRef} className="relative transform-gpu will-change-transform">
-          <svg width="200" height="400" viewBox="0 0 200 400" fill="none" xmlns="http://www.w3.org/2000/svg" className="rocket">
-            {/* Rocket Flames */}
-            <motion.g
-              animate={{ 
-                scaleY: [1, 1.5, 1],
-                opacity: [0.7, 1, 0.7]
-              }}
-              transition={{ 
-                duration: 0.8,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
+      {/* Content with Parallax Effects */}
+      <ParallaxContainer className="container mx-auto px-4 h-full relative z-20 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+          {/* Left Column - Text Content */}
+          <div className="flex flex-col justify-center">
+            <motion.div
+              ref={ref}
+              initial="hidden"
+              animate={controls}
+              variants={staggerChildrenVariants}
+              className="space-y-6 max-w-md"
             >
-              <path d="M85 350 L100 390 L115 350 Z" fill="url(#fireGradient)" />
-              <path d="M90 350 L100 370 L110 350 Z" fill="url(#fireGradient2)" />
-            </motion.g>
-            
-            {/* Rocket Body */}
-            <path d="M80 200 L80 340 L120 340 L120 200 Z" fill="#f0f0f0" stroke="#e1e1e1" strokeWidth="2" />
-            <path d="M80 200 Q80 180 100 180 Q120 180 120 200 Z" fill="#f0f0f0" stroke="#e1e1e1" strokeWidth="2" />
-            <rect x="80" y="240" width="40" height="20" fill="#e1e1e1" />
-            
-            {/* Rocket Windows */}
-            <circle cx="100" cy="220" r="10" fill="#80A0FF" stroke="#6080FF" strokeWidth="2" />
-            <circle cx="100" cy="220" r="5" fill="#6080FF" />
-            
-            {/* Rocket Fins */}
-            <path d="M120 280 L140 310 L140 340 L120 340 Z" fill="hsl(258 75% 65%)" />
-            <path d="M80 280 L60 310 L60 340 L80 340 Z" fill="hsl(258 75% 65%)" />
-            
-            {/* Rocket Nose Cone */}
-            <path d="M80 180 Q100 120 120 180 Z" fill="hsl(258 75% 65%)" />
-            
-            {/* Rocket Details */}
-            <text x="91" y="300" fill="hsl(258 75% 65%)" className="font-bold text-xs">START</text>
-            <text x="90" y="315" fill="hsl(258 75% 65%)" className="font-bold text-xs">UP</text>
-
-            {/* Gradients for flames */}
-            <defs>
-              <linearGradient id="fireGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#FF4" />
-                <stop offset="100%" stopColor="#F40" />
-              </linearGradient>
-              <linearGradient id="fireGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#FFF" />
-                <stop offset="100%" stopColor="#FF4" />
-              </linearGradient>
-            </defs>
-          </svg>
+              <ParallaxItem depth={0.2} className="relative z-10">
+                <motion.h2 
+                  variants={fadeInUpVariants}
+                  className="text-4xl md:text-5xl font-bold mb-4 leading-tight"
+                >
+                  Launch Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/80">Startup Rocket</span> To New Heights
+                </motion.h2>
+              </ParallaxItem>
+              
+              <ParallaxItem depth={0.3}>
+                <motion.p
+                  variants={fadeInUpVariants}
+                  className="text-lg text-muted-foreground leading-relaxed"
+                >
+                  StartupMatch provides the perfect launchpad for your business ideas with access to 
+                  strategic investors, milestone-based funding, and expert guidance to propel your 
+                  vision forward.
+                </motion.p>
+              </ParallaxItem>
+              
+              <ParallaxItem depth={0.1}>
+                <motion.div variants={fadeInUpVariants}>
+                  <div className="grid grid-cols-2 gap-4 mt-6">
+                    <FloatingElement 
+                      delay={0.1}
+                      yOffset={10}
+                      duration={4}
+                      className="bg-card border border-border rounded-lg p-4 backdrop-blur-sm"
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-3">
+                          <FiArrowRight className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Quick Launch</p>
+                          <p className="text-sm text-muted-foreground">Setup in minutes</p>
+                        </div>
+                      </div>
+                    </FloatingElement>
+                    
+                    <FloatingElement
+                      delay={0.3}
+                      yOffset={10}
+                      duration={4.5}
+                      className="bg-card border border-border rounded-lg p-4 backdrop-blur-sm"
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-3">
+                          <FiUsers className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Connect</p>
+                          <p className="text-sm text-muted-foreground">With investors</p>
+                        </div>
+                      </div>
+                    </FloatingElement>
+                  </div>
+                </motion.div>
+              </ParallaxItem>
+              
+              <ParallaxItem depth={0.15}>
+                <motion.div 
+                  variants={fadeInUpVariants}
+                  className="mt-6"
+                >
+                  <Button 
+                    size="lg" 
+                    className="relative overflow-hidden group"
+                    onClick={() => window.location.href = '#how-it-works'}
+                  >
+                    <span className="relative z-10">Discover How It Works</span>
+                    <motion.div
+                      className="absolute right-4 z-10 group-hover:translate-x-1 transition-transform"
+                    >
+                      <FiArrowRight />
+                    </motion.div>
+                    <motion.div 
+                      className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: "100%" }}
+                      transition={{ duration: 0.5, ease: "easeInOut" }}
+                    />
+                  </Button>
+                </motion.div>
+              </ParallaxItem>
+            </motion.div>
+          </div>
           
-          {/* Smoke particles */}
-          <motion.div
-            className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-20 h-20"
-            initial="hidden"
-            animate="visible"
-          >
-            {Array.from({ length: 8 }).map((_, index) => (
-              <motion.div
-                key={index}
-                className="absolute w-4 h-4 bg-white/20 rounded-full"
-                initial={{ y: 0, opacity: 0.8, scale: 0.5 }}
-                animate={{ 
-                  y: [0, -20 - Math.random() * 20],
-                  x: [0, (Math.random() - 0.5) * 30],
-                  opacity: [0.8, 0],
-                  scale: [0.5, 1 + Math.random()]
-                }}
-                transition={{ 
-                  duration: 1 + Math.random(),
-                  repeat: Infinity,
-                  delay: Math.random() * 2,
-                  ease: "easeOut"
-                }}
-              />
-            ))}
-          </motion.div>
+          {/* Right Column - Decorative Elements */}
+          <div className="hidden md:flex items-center justify-center relative">
+            <ParallaxItem depth={0.4} className="absolute -top-20 -right-20 w-60 h-60">
+              <div className="w-full h-full bg-primary/10 rounded-full blur-3xl opacity-50"></div>
+            </ParallaxItem>
+            
+            <ParallaxItem depth={0.3} className="absolute bottom-10 left-10 w-40 h-40">
+              <div className="w-full h-full bg-primary/15 rounded-full blur-2xl opacity-60"></div>
+            </ParallaxItem>
+            
+            <ParallaxItem depth={0.6} className="absolute top-1/3 right-1/4">
+              <FloatingElement
+                className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm"
+                duration={5}
+                delay={0.2}
+              >
+                <div className="w-full h-full"></div>
+              </FloatingElement>
+            </ParallaxItem>
+            
+            <ParallaxItem depth={0.7} className="absolute bottom-1/4 left-1/4">
+              <FloatingElement
+                className="w-16 h-16 rounded-full border-2 border-primary/30 backdrop-blur-sm"
+                duration={6}
+                delay={0.5}
+              >
+                <div className="w-full h-full"></div>
+              </FloatingElement>
+            </ParallaxItem>
+            
+            <ParallaxItem depth={0.5} className="absolute top-1/4 left-1/3">
+              <FloatingElement
+                className="w-8 h-8 rotate-45 bg-primary/10 backdrop-blur-sm"
+                duration={4.5}
+                delay={0.7}
+              >
+                <div className="w-full h-full"></div>
+              </FloatingElement>
+            </ParallaxItem>
+          </div>
         </div>
-      </div>
+      </ParallaxContainer>
     </section>
   );
 };
