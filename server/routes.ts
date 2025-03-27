@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { setupWebSocketServer } from "./ws";
 import { z } from "zod";
+import { db } from "./db";
 import { 
   insertStartupSchema, 
   insertInvestmentSchema, 
@@ -26,6 +28,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     res.status(401).json({ message: "Not authenticated" });
   };
+  
+  // User routes
+  app.get("/api/users", isAuthenticated, async (req, res) => {
+    try {
+      // Get all users from the storage
+      const users = [];
+      
+      // Create a simulated list of users until we have a getAllUsers method
+      // In a real implementation, you would call storage.getAllUsers()
+      const currentUser = req.user;
+      
+      if (!currentUser) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Add some sample users
+      const demoUsers = [
+        { id: 1, name: "John Investor", username: "investor1", role: "investor", bio: "Angel investor with 10+ years experience", createdAt: new Date() },
+        { id: 2, name: "Sarah Founder", username: "founder1", role: "founder", bio: "Tech entrepreneur and startup founder", createdAt: new Date() },
+        { id: 3, name: "Michael VC", username: "investor2", role: "investor", bio: "Venture capital partner focused on early-stage startups", createdAt: new Date() },
+        { id: 4, name: "Lisa Tech", username: "founder2", role: "founder", bio: "Serial entrepreneur with 3 successful exits", createdAt: new Date() }
+      ];
+      
+      // Only add the demo users if they don't conflict with the current user
+      for (const demoUser of demoUsers) {
+        if (demoUser.id !== currentUser?.id) {
+          users.push(demoUser);
+        }
+      }
+      
+      // Add the current user
+      users.push(currentUser);
+      
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
   // Middleware to check if user is an investor
   const isInvestor = (req: any, res: any, next: any) => {
@@ -259,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all investors for this startup
       const investments = await storage.getInvestmentsByStartupId(startup.id);
-      const investorIds = [...new Set(investments.map(inv => inv.investorId))];
+      const investorIds = Array.from(new Set(investments.map(inv => inv.investorId)));
       
       // Create notifications for all investors
       for (const investorId of investorIds) {
@@ -563,5 +604,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for real-time chat
+  setupWebSocketServer(httpServer);
+  
   return httpServer;
 }
