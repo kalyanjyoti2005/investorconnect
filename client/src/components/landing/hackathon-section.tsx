@@ -49,6 +49,50 @@ const itemVariants = {
   }
 };
 
+// Define types
+interface Hackathon {
+  id: number;
+  title: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  prize: string;
+  participants: number;
+  image: string;
+}
+
+interface Winner {
+  id: number;
+  name: string;
+  description: string;
+  founderName: string;
+  investment: string;
+  hackathon: string;
+  image: string;
+}
+
+interface CommunityPost {
+  id: number;
+  author: string;
+  role: string;
+  title: string;
+  excerpt: string;
+  upvotes: number;
+  comments: number;
+  time: string;
+}
+
+interface Event {
+  id: number;
+  title: string;
+  date: string;
+  time: string;
+  type: string;
+  speaker: string;
+  speakerRole: string;
+  image: string;
+}
+
 // Helper to calculate remaining time
 const getTimeRemaining = (endTime: string) => {
   const total = Date.parse(endTime) - Date.now();
@@ -64,125 +108,14 @@ const getTimeRemaining = (endTime: string) => {
   };
 };
 
-// Hackathon data
-const upcomingHackathons = [
-  {
-    id: 1,
-    title: "AI Innovations Hackathon",
-    category: "Artificial Intelligence",
-    startDate: new Date(Date.now() + 86400000 * 7).toISOString(), // 7 days from now
-    endDate: new Date(Date.now() + 86400000 * 9).toISOString(), // 9 days from now
-    prize: "$25,000",
-    participants: 143,
-    image: "https://images.unsplash.com/photo-1591696205602-2f950c417cb9?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGFydGlmaWNpYWwlMjBpbnRlbGxpZ2VuY2V8ZW58MHx8MHx8fDA%3D"
-  },
-  {
-    id: 2,
-    title: "FinTech Disruptors",
-    category: "Financial Technology",
-    startDate: new Date(Date.now() + 86400000 * 14).toISOString(), // 14 days from now
-    endDate: new Date(Date.now() + 86400000 * 16).toISOString(), // 16 days from now
-    prize: "$30,000",
-    participants: 98,
-    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGZpbnRlY2h8ZW58MHx8MHx8fDA%3D"
-  },
-  {
-    id: 3,
-    title: "Web3 Challenge",
-    category: "Blockchain",
-    startDate: new Date(Date.now() + 86400000 * 21).toISOString(), // 21 days from now
-    endDate: new Date(Date.now() + 86400000 * 23).toISOString(), // 23 days from now
-    prize: "$35,000",
-    participants: 87,
-    image: "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8YmxvY2tjaGFpbnxlbnwwfHwwfHx8MA%3D%3D"
-  }
-];
+// Empty data arrays
+const upcomingHackathons: Hackathon[] = [];
 
-const pastWinners = [
-  {
-    id: 1,
-    name: "EcoSync",
-    description: "AI-powered energy optimization for sustainable cities",
-    founderName: "Sarah Chen",
-    investment: "$1.2M",
-    hackathon: "CleanTech Hackathon 2024",
-    image: "https://images.unsplash.com/photo-1473893604213-3df9c15611c0?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8Z3JlZW4lMjBlbmVyZ3l8ZW58MHx8MHx8fDA%3D"
-  },
-  {
-    id: 2,
-    name: "MediTrack",
-    description: "Blockchain-based medical records management system",
-    founderName: "David Wilson",
-    investment: "$850K",
-    hackathon: "HealthTech Innovation 2023",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8bWVkaWNhbHxlbnwwfHwwfHx8MA%3D%3D"
-  },
-  {
-    id: 3,
-    name: "FinFlow",
-    description: "AI-powered financial planning platform for small businesses",
-    founderName: "Jessica Rahman",
-    investment: "$1.5M",
-    hackathon: "FinTech Summit 2023",
-    image: "https://images.unsplash.com/photo-1607921007061-46e5156b517d?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8ZmluYW5jaWFsJTIwcGxhbm5pbmd8ZW58MHx8MHx8fDA%3D"
-  }
-];
+const pastWinners: Winner[] = [];
 
-const communityPosts = [
-  {
-    id: 1,
-    author: "Michael K.",
-    role: "Entrepreneur",
-    title: "Looking for a technical co-founder for HealthTech startup",
-    excerpt: "I'm building a platform to streamline hospital operations using AI. Need someone with ML experience...",
-    upvotes: 28,
-    comments: 12,
-    time: "2h ago"
-  },
-  {
-    id: 2,
-    author: "Sophia L.",
-    role: "Investor",
-    title: "AMA: What I look for in early-stage SaaS startups",
-    excerpt: "I've invested in 20+ SaaS startups in the past 5 years. Ask me anything about what makes a compelling pitch...",
-    upvotes: 45,
-    comments: 23,
-    time: "5h ago"
-  },
-  {
-    id: 3,
-    author: "James T.",
-    role: "Founder",
-    title: "Successfully raised $2M seed round - Lessons learned",
-    excerpt: "After 30+ investor meetings and countless pitch revisions, we finally closed our seed round. Here's what worked...",
-    upvotes: 86,
-    comments: 34,
-    time: "1d ago"
-  }
-];
+const communityPosts: CommunityPost[] = [];
 
-const upcomingEvents = [
-  {
-    id: 1,
-    title: "Pitch Perfect: Master Your Startup Pitch",
-    date: "June 15, 2024",
-    time: "2:00 PM - 4:00 PM EST",
-    type: "Webinar",
-    speaker: "Alex Martins",
-    speakerRole: "VC Partner at TechFund",
-    image: "https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cGl0Y2h8ZW58MHx8MHx8fDA%3D"
-  },
-  {
-    id: 2,
-    title: "Building in Public: Growing Your Startup Community",
-    date: "June 18, 2024",
-    time: "1:00 PM - 2:30 PM EST",
-    type: "Panel Discussion",
-    speaker: "Multiple Speakers",
-    speakerRole: "Startup Founders",
-    image: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8ZGlzY3Vzc2lvbnxlbnwwfHwwfHx8MA%3D%3D"
-  }
-];
+const upcomingEvents: Event[] = [];
 
 export default function HackathonSection() {
   const [nextHackathonTime, setNextHackathonTime] = useState({
@@ -198,10 +131,14 @@ export default function HackathonSection() {
   
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  // Calculate countdown for the next hackathon
+  // Set a default countdown for demonstration purposes
   useEffect(() => {
+    // Set a default countdown for 30 days from now
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    
     const timer = setInterval(() => {
-      const timeRemaining = getTimeRemaining(upcomingHackathons[0].startDate);
+      const timeRemaining = getTimeRemaining(futureDate.toISOString());
       setNextHackathonTime({
         days: timeRemaining.days,
         hours: timeRemaining.hours,
@@ -210,7 +147,7 @@ export default function HackathonSection() {
     }, 60000); // Update every minute
     
     // Initial calculation
-    const timeRemaining = getTimeRemaining(upcomingHackathons[0].startDate);
+    const timeRemaining = getTimeRemaining(futureDate.toISOString());
     setNextHackathonTime({
       days: timeRemaining.days,
       hours: timeRemaining.hours,
@@ -343,67 +280,78 @@ export default function HackathonSection() {
               animate={inView && activeTab === "upcoming" ? "visible" : "hidden"}
               className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
             >
-              {upcomingHackathons.map((hackathon) => (
-                <motion.div key={hackathon.id} variants={itemVariants}>
-                  <Card className="overflow-hidden h-full">
-                    <div className="relative h-48 overflow-hidden">
-                      <img 
-                        src={hackathon.image} 
-                        alt={hackathon.title} 
-                        className="object-cover w-full h-full transition-transform hover:scale-105"
-                      />
-                      <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent">
-                        <Badge variant="outline" className="bg-black/50 text-white border-none">
-                          {hackathon.category}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{hackathon.title}</span>
-                        <Badge variant="default" className="bg-primary/90">
-                          Prize: {hackathon.prize}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(hackathon.startDate).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })} - {new Date(hackathon.endDate).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}
-                        </span>
-                      </CardDescription>
-                    </CardHeader>
-                    
-                    <CardContent>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Users className="w-4 h-4" />
-                          <span>{hackathon.participants} participants</span>
-                        </div>
-                        <div className="text-sm font-medium">
-                          Registration Open
+              {upcomingHackathons.length > 0 ? (
+                upcomingHackathons.map((hackathon) => (
+                  <motion.div key={hackathon.id} variants={itemVariants}>
+                    <Card className="overflow-hidden h-full">
+                      <div className="relative h-48 overflow-hidden">
+                        <img 
+                          src={hackathon.image} 
+                          alt={hackathon.title} 
+                          className="object-cover w-full h-full transition-transform hover:scale-105"
+                        />
+                        <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent">
+                          <Badge variant="outline" className="bg-black/50 text-white border-none">
+                            {hackathon.category}
+                          </Badge>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-1 text-sm">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Starts in:</span>
-                        <span className="font-medium">{getTimeRemaining(hackathon.startDate).days} days</span>
-                      </div>
-                    </CardContent>
-                    
-                    <CardFooter>
-                      <Button className="w-full">Register Now</Button>
-                    </CardFooter>
-                  </Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <span>{hackathon.title}</span>
+                          <Badge variant="default" className="bg-primary/90">
+                            Prize: {hackathon.prize}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {new Date(hackathon.startDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })} - {new Date(hackathon.endDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </span>
+                        </CardDescription>
+                      </CardHeader>
+                      
+                      <CardContent>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Users className="w-4 h-4" />
+                            <span>{hackathon.participants} participants</span>
+                          </div>
+                          <div className="text-sm font-medium">
+                            Registration Open
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Starts in:</span>
+                          <span className="font-medium">{getTimeRemaining(hackathon.startDate).days} days</span>
+                        </div>
+                      </CardContent>
+                      
+                      <CardFooter>
+                        <Button className="w-full">Register Now</Button>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div variants={itemVariants} className="col-span-full py-16 text-center">
+                  <Calendar className="mx-auto w-16 h-16 opacity-20 mb-4" />
+                  <h3 className="text-xl font-medium mb-2">No Hackathons Scheduled</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                    Our team is working on new hackathon events. Check back soon for upcoming opportunities.
+                  </p>
+                  <Button variant="outline">Get Notified of New Events</Button>
                 </motion.div>
-              ))}
+              )}
             </motion.div>
             
             {/* How It Works Section */}
@@ -473,47 +421,58 @@ export default function HackathonSection() {
               </div>
               
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {pastWinners.map((winner) => (
-                  <motion.div 
-                    key={winner.id} 
-                    className="overflow-hidden border rounded-lg"
-                    whileHover={{ 
-                      y: -5,
-                      boxShadow: "0 10px 30px -15px rgba(0, 0, 0, 0.3)"
-                    }}
-                  >
-                    <div className="relative h-40">
-                      <img 
-                        src={winner.image} 
-                        alt={winner.name} 
-                        className="object-cover w-full h-full"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Badge className="bg-yellow-500 hover:bg-yellow-600">
-                          <Trophy className="w-3 h-3 mr-1" /> Winner
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4">
-                      <h4 className="text-lg font-semibold">{winner.name}</h4>
-                      <p className="mb-3 text-sm text-muted-foreground">{winner.description}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Founded by:</span> {winner.founderName}
-                        </div>
-                        <div className="font-medium text-primary">
-                          {winner.investment}
+                {pastWinners.length > 0 ? (
+                  pastWinners.map((winner) => (
+                    <motion.div 
+                      key={winner.id} 
+                      className="overflow-hidden border rounded-lg"
+                      whileHover={{ 
+                        y: -5,
+                        boxShadow: "0 10px 30px -15px rgba(0, 0, 0, 0.3)"
+                      }}
+                    >
+                      <div className="relative h-40">
+                        <img 
+                          src={winner.image} 
+                          alt={winner.name} 
+                          className="object-cover w-full h-full"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-yellow-500 hover:bg-yellow-600">
+                            <Trophy className="w-3 h-3 mr-1" /> Winner
+                          </Badge>
                         </div>
                       </div>
                       
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        {winner.hackathon}
+                      <div className="p-4">
+                        <h4 className="text-lg font-semibold">{winner.name}</h4>
+                        <p className="mb-3 text-sm text-muted-foreground">{winner.description}</p>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Founded by:</span> {winner.founderName}
+                          </div>
+                          <div className="font-medium text-primary">
+                            {winner.investment}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          {winner.hackathon}
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div variants={itemVariants} className="col-span-full py-16 text-center">
+                    <Trophy className="mx-auto w-16 h-16 opacity-20 mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Past Winners Coming Soon</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                      Our first cohort of hackathon winners will be announced after the completion of upcoming events.
+                    </p>
+                    <Button variant="outline">Apply for Next Hackathon</Button>
                   </motion.div>
-                ))}
+                )}
               </div>
             </motion.div>
           </TabsContent>
@@ -532,44 +491,55 @@ export default function HackathonSection() {
                   animate={activeTab === "community" ? "visible" : "hidden"}
                   className="space-y-4"
                 >
-                  {communityPosts.map((post) => (
-                    <motion.div 
-                      key={post.id} 
-                      variants={itemVariants}
-                      className="p-5 transition-shadow border rounded-lg hover:shadow-md"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback>{post.author[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{post.author}</div>
-                            <div className="text-xs text-muted-foreground">{post.role}</div>
+                  {communityPosts.length > 0 ? (
+                    communityPosts.map((post) => (
+                      <motion.div 
+                        key={post.id} 
+                        variants={itemVariants}
+                        className="p-5 transition-shadow border rounded-lg hover:shadow-md"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-8 h-8">
+                              <AvatarFallback>{post.author[0]}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{post.author}</div>
+                              <div className="text-xs text-muted-foreground">{post.role}</div>
+                            </div>
                           </div>
+                          <span className="text-xs text-muted-foreground">{post.time}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">{post.time}</span>
-                      </div>
-                      
-                      <div className="mb-3">
-                        <h4 className="mb-2 text-base font-semibold">{post.title}</h4>
-                        <p className="text-sm text-muted-foreground">{post.excerpt}</p>
-                      </div>
-                      
-                      <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <ThumbsUp className="w-4 h-4" /> {post.upvotes}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <MessageSquare className="w-4 h-4" /> {post.comments}
-                        </Button>
-                        <div className="flex-grow"></div>
-                        <Button variant="link" size="sm" className="gap-1">
-                          Read More <ArrowRight className="w-3 h-3" />
-                        </Button>
-                      </div>
+                        
+                        <div className="mb-3">
+                          <h4 className="mb-2 text-base font-semibold">{post.title}</h4>
+                          <p className="text-sm text-muted-foreground">{post.excerpt}</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <Button variant="ghost" size="sm" className="gap-1">
+                            <ThumbsUp className="w-4 h-4" /> {post.upvotes}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="gap-1">
+                            <MessageSquare className="w-4 h-4" /> {post.comments}
+                          </Button>
+                          <div className="flex-grow"></div>
+                          <Button variant="link" size="sm" className="gap-1">
+                            Read More <ArrowRight className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div variants={itemVariants} className="py-16 text-center">
+                      <MessageSquare className="mx-auto w-16 h-16 opacity-20 mb-4" />
+                      <h3 className="text-xl font-medium mb-2">Join the Conversation</h3>
+                      <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                        Be the first to start a discussion and connect with entrepreneurs and investors in our community.
+                      </p>
+                      <Button>Start a Discussion</Button>
                     </motion.div>
-                  ))}
+                  )}
                 </motion.div>
                 
                 <div className="flex justify-center mt-6">
@@ -651,54 +621,68 @@ export default function HackathonSection() {
               </div>
               
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {upcomingEvents.map((event) => (
-                  <motion.div 
-                    key={event.id}
-                    variants={itemVariants}
-                    className="overflow-hidden border rounded-lg"
-                  >
-                    <div className="relative h-48">
-                      <img 
-                        src={event.image}
-                        alt={event.title}
-                        className="object-cover w-full h-full"
-                      />
-                      <div className="absolute top-3 right-3">
-                        <Badge variant="default" className="bg-background/90 text-foreground hover:bg-background/80">
-                          {event.type}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="p-5">
-                      <h4 className="mb-2 text-lg font-semibold">{event.title}</h4>
-                      
-                      <div className="flex items-center gap-2 mb-3">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{event.date} • {event.time}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mb-4">
-                        <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs">{event.speaker[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-sm">
-                          <span className="font-medium">{event.speaker}</span>
-                          <span className="ml-1 text-muted-foreground">• {event.speakerRole}</span>
+                {upcomingEvents.length > 0 ? (
+                  upcomingEvents.map((event) => (
+                    <motion.div 
+                      key={event.id}
+                      variants={itemVariants}
+                      className="overflow-hidden border rounded-lg"
+                    >
+                      <div className="relative h-48">
+                        <img 
+                          src={event.image}
+                          alt={event.title}
+                          className="object-cover w-full h-full"
+                        />
+                        <div className="absolute top-3 right-3">
+                          <Badge variant="default" className="bg-background/90 text-foreground hover:bg-background/80">
+                            {event.type}
+                          </Badge>
                         </div>
                       </div>
                       
-                      <div className="flex justify-between">
-                        <Button variant="outline" className="gap-1">
-                          <Calendar className="w-4 h-4" /> Add to Calendar
-                        </Button>
-                        <Button className="gap-1">
-                          Register <ArrowRight className="w-4 h-4" />
-                        </Button>
+                      <div className="p-5">
+                        <h4 className="mb-2 text-lg font-semibold">{event.title}</h4>
+                        
+                        <div className="flex items-center gap-2 mb-3">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{event.date} • {event.time}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                          <Avatar className="w-6 h-6">
+                            <AvatarFallback className="text-xs">{event.speaker[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="text-sm">
+                            <span className="font-medium">{event.speaker}</span>
+                            <span className="ml-1 text-muted-foreground">• {event.speakerRole}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between">
+                          <Button variant="outline" className="gap-1">
+                            <Calendar className="w-4 h-4" /> Add to Calendar
+                          </Button>
+                          <Button className="gap-1">
+                            Register <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div variants={itemVariants} className="col-span-full py-16 text-center">
+                    <Video className="mx-auto w-16 h-16 opacity-20 mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Events Coming Soon</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                      We're planning exciting live events with industry experts. Subscribe to be notified when new events are scheduled.
+                    </p>
+                    <div className="flex flex-wrap gap-4 justify-center">
+                      <Button variant="outline">Subscribe to Updates</Button>
+                      <Button>Suggest an Event</Button>
                     </div>
                   </motion.div>
-                ))}
+                )}
               </div>
               
               <div className="p-5 mt-8 text-center border rounded-lg bg-background">
