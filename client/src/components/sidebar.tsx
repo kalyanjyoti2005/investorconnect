@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, Search, BanknoteIcon, MessageSquare, 
   Calendar, ArrowUpDown, Settings, HelpCircle, Moon, Sun,
-  Menu, X
+  Menu, X, LightbulbIcon, BarChart3
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -98,8 +98,8 @@ export default function Sidebar() {
             <div className="p-3 text-xs font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg shadow-md w-full">
               <div className="flex items-center justify-center space-x-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.profileImage} alt={user?.name} />
-                  <AvatarFallback className="bg-primary-200 text-primary-700">{user?.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={user?.profileImage || undefined} alt={user?.name} />
+                  <AvatarFallback className="bg-primary-200 text-primary-700">{user?.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="font-semibold">{user?.name}</div>
@@ -148,6 +148,22 @@ export default function Sidebar() {
               icon={<ArrowUpDown className="w-5 h-5" />} 
               label="Voting Panel" 
             />
+
+            {!isInvestor && (
+              <NavItem 
+                href="/submit-idea" 
+                icon={<LightbulbIcon className="w-5 h-5" />} 
+                label="Submit Idea" 
+              />
+            )}
+            
+            {isInvestor && (
+              <NavItem 
+                href="/investor" 
+                icon={<BarChart3 className="w-5 h-5" />} 
+                label="Investor Dashboard" 
+              />
+            )}
           </nav>
           
           {/* Settings and Help Section */}

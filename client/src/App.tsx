@@ -12,6 +12,8 @@ import Events from "@/pages/events";
 import Voting from "@/pages/voting";
 import Settings from "@/pages/settings";
 import LandingPageAnimated from "@/pages/landing-page-animated";
+import SubmitIdea from "@/pages/submit-idea";
+import InvestorDashboard from "@/pages/investor-dashboard";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
@@ -28,6 +30,8 @@ function Router() {
       <ProtectedRoute path="/events" component={Events} />
       <ProtectedRoute path="/voting" component={Voting} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/submit-idea" component={SubmitIdea} />
+      <ProtectedRoute path="/investor" component={InvestorDashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
