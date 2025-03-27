@@ -6,7 +6,11 @@ import { Card } from "@/components/ui/card";
 // Register Chart.js components
 Chart.register(...registerables);
 
-export default function PortfolioChart() {
+interface PortfolioChartProps {
+  data: any[];
+}
+
+export default function PortfolioChart({ data }: PortfolioChartProps) {
   const chartRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<Chart | null>(null);
   const { theme } = useTheme();

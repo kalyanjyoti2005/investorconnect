@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Startup } from "@shared/schema";
-import { Star } from "lucide-react";
+import { EyeIcon, FileTextIcon, PieChartIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StartupDetail from "@/components/startup/startup-detail";
 import { formatCurrency } from "@/lib/utils";
 
@@ -58,42 +57,44 @@ export default function TrendingStartupRow({ startup }: TrendingStartupRowProps)
             </div>
             <div className="ml-3">
               <p className="font-semibold">{startup.name}</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">{startup.description.substring(0, 30)}...</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {startup.description && startup.description.length > 30 
+                  ? `${startup.description.substring(0, 30)}...` 
+                  : startup.description || "No description available"}
+              </p>
             </div>
           </div>
         </td>
         <td className="px-4 py-3 text-sm">
-          {startup.industry}
+          {startup.industry || "Unspecified"}
         </td>
         <td className="px-4 py-3 text-sm">
           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStageBadgeColor(startup.stage)}`}>
-            {formatStage(startup.stage)}
+            {formatStage(startup.stage || "idea")}
           </span>
         </td>
         <td className="px-4 py-3 text-sm">
-          <div className="flex items-center">
-            <Star className="w-4 h-4 text-yellow-500 mr-1 fill-current" />
-            <span>{startup.trendingScore}</span>
-          </div>
-        </td>
-        <td className="px-4 py-3 text-sm">
-          {formatCurrency(startup.fundingGoal)}
+          {startup.fundingGoal ? formatCurrency(startup.fundingGoal) : "Not set"}
         </td>
         <td className="px-4 py-3 text-sm">
           <div className="flex space-x-2">
             <Button 
               size="sm"
               onClick={() => setIsDetailOpen(true)}
-              className="px-2 py-1 text-xs font-medium"
+              className="px-2 py-1 text-xs font-medium group"
+              title="View startup details"
             >
-              View
+              <EyeIcon className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
+              Details
             </Button>
             {isInvestor && (
               <Button 
                 size="sm"
                 variant="outline"
-                className="px-2 py-1 text-xs font-medium"
+                className="px-2 py-1 text-xs font-medium group"
+                title="Request NDA for full information"
               >
+                <FileTextIcon className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
                 NDA
               </Button>
             )}

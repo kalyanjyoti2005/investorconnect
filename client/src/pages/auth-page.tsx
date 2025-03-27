@@ -250,6 +250,7 @@ export default function AuthPage() {
                               <Textarea 
                                 placeholder="Brief description about yourself or your investment interests" 
                                 {...field}
+                                value={field.value || ''}
                               />
                             </FormControl>
                             <FormMessage />

@@ -121,15 +121,15 @@ export default function Settings() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="bio">Bio</Label>
-                          <Textarea id="bio" defaultValue={user?.bio} />
+                          <Textarea id="bio" defaultValue={user?.bio || ""} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="location">Location</Label>
-                          <Input id="location" defaultValue={user?.location} />
+                          <Input id="location" defaultValue="" placeholder="e.g. San Francisco, CA" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="website">Website</Label>
-                          <Input id="website" defaultValue={user?.website} placeholder="https://" />
+                          <Input id="website" defaultValue="" placeholder="https://" />
                         </div>
                       </div>
                     </div>

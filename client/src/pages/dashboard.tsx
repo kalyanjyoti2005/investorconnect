@@ -8,230 +8,175 @@ import AiRecommendationCard from "@/components/dashboard/ai-recommendation-card"
 import ActivityItem from "@/components/dashboard/activity-item";
 import EventItem from "@/components/dashboard/event-item";
 import TrendingStartupRow from "@/components/dashboard/trending-startup-row";
-import { Startup } from "@shared/schema";
+import { Startup, Investment, Message, Event, Notification } from "@shared/schema";
+import { FiDollarSign, FiUsers, FiEye, FiFileText, FiBarChart2, FiInbox, FiClock, FiCheckCircle } from "react-icons/fi";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const isInvestor = user?.role === "investor";
 
-  // Fetch trending startups
+  // Fetch necessary data for the dashboard
   const { data: startups, isLoading: startupsLoading } = useQuery<Startup[]>({
     queryKey: ["/api/startups"],
   });
+  
+  const { data: investments, isLoading: investmentsLoading } = useQuery<Investment[]>({
+    queryKey: ["/api/investments", isInvestor ? "investor" : "startup"],
+  });
+  
+  const { data: messages, isLoading: messagesLoading } = useQuery<Message[]>({
+    queryKey: ["/api/messages"],
+  });
+  
+  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ["/api/events"],
+  });
+  
+  const { data: notifications, isLoading: notificationsLoading } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+  });
 
-  // Example data for the dashboard
-  const investorStats = [
+  // Generate stats cards based on real data
+  const investorStatsData = [
     {
       title: "Portfolio Value",
-      value: "$6,389,400",
-      change: "+12.5%",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-            clipRule="evenodd"
-          ></path>
-        </svg>
-      ),
+      value: investments?.length ? `$${investments.reduce((total, inv) => total + inv.amount, 0).toLocaleString()}` : "-",
+      change: investments?.length ? `${investments.length} active` : "No investments yet",
+      icon: <FiDollarSign className="w-5 h-5" />,
       color: "green",
     },
     {
       title: "Active Investments",
-      value: "23",
-      change: "4 new this month",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
-        </svg>
-      ),
+      value: investments?.length ? investments.length.toString() : "0",
+      change: "Active investments",
+      icon: <FiBarChart2 className="w-5 h-5" />,
       color: "blue",
     },
     {
-      title: "Deal Flow",
-      value: "47",
-      change: "12 new views",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z"
-            clipRule="evenodd"
-          ></path>
-        </svg>
-      ),
+      title: "Startups Viewed",
+      value: startups?.length ? startups.length.toString() : "0",
+      change: "Available startups",
+      icon: <FiEye className="w-5 h-5" />,
       color: "yellow",
     },
     {
-      title: "Avg. ROI",
-      value: "24.5%",
-      change: "+3.2% increase",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z"
-            clipRule="evenodd"
-          ></path>
-        </svg>
-      ),
+      title: "Unread Messages",
+      value: messages?.filter(m => m.status === "unread" && m.receiverId === user?.id)?.length.toString() || "0",
+      change: "Awaiting response",
+      icon: <FiInbox className="w-5 h-5" />,
       color: "purple",
     },
   ];
 
-  const founderStats = [
+  const founderStatsData = [
     {
-      title: "Current Funding",
-      value: "$2,850,000",
-      change: "+15% this month",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-            clipRule="evenodd"
-          ></path>
-        </svg>
-      ),
+      title: "Total Funding",
+      value: investments?.length ? `$${investments.reduce((total, inv) => total + inv.amount, 0).toLocaleString()}` : "$0",
+      change: investments?.length ? `${investments.length} investments` : "No funding yet",
+      icon: <FiDollarSign className="w-5 h-5" />,
       color: "green",
     },
     {
       title: "Investor Interest",
-      value: "37",
-      change: "8 new this month",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
-        </svg>
-      ),
+      value: startups?.length ? (startups[0]?.trendingScore?.toString() || "0") : "0",
+      change: "Profile views",
+      icon: <FiUsers className="w-5 h-5" />,
       color: "blue",
     },
     {
-      title: "NDA Requests",
-      value: "18",
-      change: "5 pending",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z"
-            clipRule="evenodd"
-          ></path>
-        </svg>
-      ),
+      title: "Documents",
+      value: "0",
+      change: "Active NDAs",
+      icon: <FiFileText className="w-5 h-5" />,
       color: "yellow",
     },
     {
-      title: "Pitch Views",
-      value: "210",
-      change: "+12% increase",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z"
-            clipRule="evenodd"
-          ></path>
-        </svg>
-      ),
+      title: "Upcoming Events",
+      value: events?.length?.toString() || "0",
+      change: "Scheduled events",
+      icon: <FiClock className="w-5 h-5" />,
       color: "purple",
     },
   ];
 
-  // Recommendation data
-  const recommendations = [
-    {
-      id: 1,
-      name: "HealthAI Solutions",
-      description: "AI-powered healthcare diagnostics",
-      logo: "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=120&h=120&q=80",
-      matchPercentage: 98,
-      reason: "Based on your interest in healthcare technology and previous investments in early-stage medical startups.",
-    },
-    {
-      id: 2,
-      name: "GreenTech Energy",
-      description: "Renewable energy storage solutions",
-      logo: "https://images.unsplash.com/photo-1581287053822-fd7bf4f4bfec?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=120&h=120&q=80",
-      matchPercentage: 94,
-      reason: "Matches your interest in sustainable technology and recent portfolio diversification into clean energy.",
-    },
-    {
-      id: 3,
-      name: "FinTech Innovate",
-      description: "Blockchain payment infrastructure",
-      logo: "https://images.unsplash.com/photo-1622675363311-3e1904dc1885?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=120&h=120&q=80",
-      matchPercentage: 85,
-      reason: "Aligns with your fintech portfolio and interest in decentralized finance solutions.",
-    },
-  ];
+  // Generate recent activity items from notifications
+  const recentActivityItems = notifications?.map(notification => ({
+    id: notification.id,
+    title: notification.content,
+    time: formatTimeAgo(notification.createdAt),
+    icon: getIconForNotificationType(notification.type),
+    color: getColorForNotificationType(notification.type),
+  })) || [];
 
-  // Recent activity data
-  const recentActivities = [
-    {
-      id: 1,
-      type: "investment",
-      title: "New investment made in RoboTech Solutions",
-      time: "10 minutes ago",
-      icon: "plus",
-      color: "primary",
-    },
-    {
-      id: 2,
-      type: "message",
-      title: "New message from Sarah Wilson at HealthAI",
-      time: "2 hours ago",
-      icon: "message",
-      color: "blue",
-    },
-    {
-      id: 3,
-      type: "nda",
-      title: "NDA signed with FinTech Innovate",
-      time: "5 hours ago",
-      icon: "info",
-      color: "yellow",
-    },
-    {
-      id: 4,
-      type: "payment",
-      title: "Milestone payment of $150,000 released to EcoTech",
-      time: "1 day ago",
-      icon: "dollar",
-      color: "green",
-    },
-  ];
+  // Helper function to format time ago
+  function formatTimeAgo(dateString: string | Date) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  }
+  
+  // Helper functions for notification icons and colors
+  function getIconForNotificationType(type: string): string {
+    switch (type) {
+      case 'investment': return 'dollar';
+      case 'message': return 'message';
+      case 'event': return 'calendar';
+      case 'milestone': return 'check';
+      case 'nda': return 'file';
+      default: return 'info';
+    }
+  }
+  
+  function getColorForNotificationType(type: string): string {
+    switch (type) {
+      case 'investment': return 'green';
+      case 'message': return 'blue';
+      case 'event': return 'purple';
+      case 'milestone': return 'primary';
+      case 'nda': return 'yellow';
+      default: return 'gray';
+    }
+  }
 
-  // Upcoming events data
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "Virtual Pitch Night: AI & Machine Learning",
-      time: "7:00 PM - 9:00 PM EST",
-      date: "Today",
-      details: "8 startups presenting",
-      type: "virtual",
-      color: "primary",
-    },
-    {
-      id: 2,
-      title: "1:1 Meeting with GreenTech Energy Founders",
-      time: "10:30 AM - 11:30 AM EST",
-      date: "Tomorrow",
-      details: "Virtual Meeting",
-      type: "meeting",
-      color: "blue",
-    },
-    {
-      id: 3,
-      title: "Investor Syndicate Meeting: Healthcare Tech",
-      time: "2:00 PM - 3:30 PM EST",
-      date: "In 3 days",
-      details: "5 investors confirmed",
-      type: "syndicate",
-      color: "purple",
-    },
-  ];
+  // Upcoming events from events data
+  const upcomingEventsData = events?.map(event => ({
+    id: event.id,
+    title: event.title,
+    time: formatEventTime(event.startTime, event.endTime),
+    date: formatEventDate(event.startTime),
+    details: event.description || "No additional details",
+    type: "event", // Default event type
+    color: "primary",
+  })) || [];
+  
+  // Helper functions for event time and date formatting
+  function formatEventTime(start: string | Date, end: string | Date) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    return `${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  
+  function formatEventDate(date: string | Date) {
+    const eventDate = new Date(date);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (eventDate.toDateString() === today.toDateString()) return 'Today';
+    if (eventDate.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+    
+    // Calculate days difference
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 7) return `In ${diffDays} days`;
+    
+    return eventDate.toLocaleDateString();
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -248,7 +193,7 @@ export default function Dashboard() {
             
             {/* Stats Cards */}
             <div className="grid gap-6 mb-8 md:grid-cols-2 xl:grid-cols-4">
-              {(isInvestor ? investorStats : founderStats).map((stat, index) => (
+              {(isInvestor ? investorStatsData : founderStatsData).map((stat, index) => (
                 <StatsCard
                   key={index}
                   title={stat.title}
@@ -260,42 +205,52 @@ export default function Dashboard() {
               ))}
             </div>
             
-            {/* AI Recommendations & Portfolio Performance */}
+            {/* Portfolio Performance & AI Recommendations */}
             <div className="grid gap-6 mb-8 md:grid-cols-2">
-              {/* AI Recommendations */}
-              <div className="min-w-0 p-4 bg-white rounded-lg shadow-xs dark:bg-gray-800">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-600 dark:text-gray-300">
-                    AI-Powered Recommendations
-                  </h4>
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-1 text-xs font-medium text-primary-700 bg-primary-100 rounded-full dark:bg-primary-700 dark:text-primary-100">AI-Powered</span>
-                    <a href="#" className="text-sm text-primary-600 dark:text-primary-400 hover:underline">View All</a>
-                  </div>
-                </div>
-                
-                {/* Recommendation Cards */}
-                <div className="space-y-4">
-                  {recommendations.map((recommendation) => (
-                    <AiRecommendationCard
-                      key={recommendation.id}
-                      name={recommendation.name}
-                      description={recommendation.description}
-                      logo={recommendation.logo}
-                      matchPercentage={recommendation.matchPercentage}
-                      reason={recommendation.reason}
-                    />
-                  ))}
-                </div>
-              </div>
-              
               {/* Portfolio Performance */}
               <div className="min-w-0 p-4 bg-white rounded-lg shadow-xs dark:bg-gray-800">
                 <h4 className="mb-4 text-lg font-semibold text-gray-600 dark:text-gray-300">
-                  Portfolio Performance
+                  {isInvestor ? "Portfolio Performance" : "Funding Progress"}
                 </h4>
-                <div className="relative" style={{ height: "300px" }}>
-                  <PortfolioChart />
+                {investmentsLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : investments && investments.length > 0 ? (
+                  <div className="relative" style={{ height: "300px" }}>
+                    <PortfolioChart data={investments} />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-center text-gray-500 dark:text-gray-400">
+                    <FiDollarSign className="w-12 h-12 mb-4 opacity-30" />
+                    <p className="text-lg mb-2">No {isInvestor ? "investment" : "funding"} data available.</p>
+                    <p className="text-sm">
+                      {isInvestor 
+                        ? "Start investing in promising startups to track your portfolio performance."
+                        : "Secure your first investment to track your funding progress."}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* AI Recommendations or Similar Feature */}
+              <div className="min-w-0 p-4 bg-white rounded-lg shadow-xs dark:bg-gray-800">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+                    {isInvestor ? "Startup Recommendations" : "Potential Investors"}
+                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-2 py-1 text-xs font-medium text-primary-700 bg-primary-100 rounded-full dark:bg-primary-700 dark:text-primary-100">Coming Soon</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center justify-center h-64 text-center text-gray-500 dark:text-gray-400">
+                  <FiCheckCircle className="w-12 h-12 mb-4 opacity-30" />
+                  <p className="text-lg mb-2">AI-powered matching is on the way!</p>
+                  <p className="text-sm">
+                    We're building an intelligent system to match 
+                    {isInvestor ? " startups with your investment criteria." : " your startup with the right investors."}
+                  </p>
                 </div>
               </div>
             </div>
@@ -307,20 +262,32 @@ export default function Dashboard() {
                 <h4 className="mb-4 text-lg font-semibold text-gray-600 dark:text-gray-300">
                   Recent Activity
                 </h4>
-                <div className="space-y-4">
-                  {recentActivities.map((activity) => (
-                    <ActivityItem
-                      key={activity.id}
-                      title={activity.title}
-                      time={activity.time}
-                      icon={activity.icon}
-                      color={activity.color}
-                    />
-                  ))}
-                </div>
-                <div className="mt-6 text-center">
-                  <a href="#" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">View All Activity</a>
-                </div>
+                {notificationsLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : recentActivityItems.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentActivityItems.slice(0, 4).map((activity) => (
+                      <ActivityItem
+                        key={activity.id}
+                        title={activity.title}
+                        time={activity.time}
+                        icon={activity.icon}
+                        color={activity.color}
+                      />
+                    ))}
+                    <div className="mt-6 text-center">
+                      <a href="#" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">View All Activity</a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-center text-gray-500 dark:text-gray-400">
+                    <FiInbox className="w-12 h-12 mb-4 opacity-30" />
+                    <p className="text-lg mb-2">No recent activity</p>
+                    <p className="text-sm">Your recent activities will appear here.</p>
+                  </div>
+                )}
               </div>
               
               {/* Upcoming Events */}
@@ -328,22 +295,34 @@ export default function Dashboard() {
                 <h4 className="mb-4 text-lg font-semibold text-gray-600 dark:text-gray-300">
                   Upcoming Events
                 </h4>
-                <div className="space-y-6">
-                  {upcomingEvents.map((event) => (
-                    <EventItem
-                      key={event.id}
-                      title={event.title}
-                      time={event.time}
-                      date={event.date}
-                      details={event.details}
-                      type={event.type}
-                      color={event.color}
-                    />
-                  ))}
-                </div>
-                <div className="mt-6 text-center">
-                  <a href="#" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">View Full Calendar</a>
-                </div>
+                {eventsLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : upcomingEventsData.length > 0 ? (
+                  <div className="space-y-6">
+                    {upcomingEventsData.slice(0, 3).map((event) => (
+                      <EventItem
+                        key={event.id}
+                        title={event.title}
+                        time={event.time}
+                        date={event.date}
+                        details={event.details}
+                        type={event.type}
+                        color={event.color}
+                      />
+                    ))}
+                    <div className="mt-6 text-center">
+                      <a href="/events" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">View Full Calendar</a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-center text-gray-500 dark:text-gray-400">
+                    <FiClock className="w-12 h-12 mb-4 opacity-30" />
+                    <p className="text-lg mb-2">No upcoming events</p>
+                    <p className="text-sm">Schedule or join events to see them here.</p>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -351,7 +330,7 @@ export default function Dashboard() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-semibold text-gray-600 dark:text-gray-300">
-                  Trending Startups
+                  {isInvestor ? "Trending Startups" : "Your Startups"}
                 </h4>
                 <a href="/explore" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline">View All</a>
               </div>
@@ -363,29 +342,39 @@ export default function Dashboard() {
                         <th className="px-4 py-3">Company</th>
                         <th className="px-4 py-3">Industry</th>
                         <th className="px-4 py-3">Stage</th>
-                        <th className="px-4 py-3">Trend Score</th>
                         <th className="px-4 py-3">Funding Goal</th>
                         <th className="px-4 py-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800">
-                      {startups?.slice(0, 3).map((startup) => (
-                        <TrendingStartupRow
-                          key={startup.id}
-                          startup={startup}
-                        />
-                      ))}
-                      {startupsLoading && (
+                      {startupsLoading ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-                            Loading startups...
+                          <td colSpan={5} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center justify-center py-4">
+                              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+                              Loading startups...
+                            </div>
                           </td>
                         </tr>
-                      )}
-                      {!startupsLoading && (!startups || startups.length === 0) && (
+                      ) : startups && startups.length > 0 ? (
+                        startups.slice(0, 3).map((startup) => (
+                          <TrendingStartupRow
+                            key={startup.id}
+                            startup={startup}
+                          />
+                        ))
+                      ) : (
                         <tr>
-                          <td colSpan={6} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
-                            No startups found. Be the first to create one!
+                          <td colSpan={5} className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                            <div className="flex flex-col items-center justify-center py-8">
+                              <FiUsers className="w-10 h-10 mb-3 opacity-30" />
+                              <p className="mb-1">No startups found.</p>
+                              {isInvestor ? (
+                                <p className="text-sm">Explore startups to find investment opportunities.</p>
+                              ) : (
+                                <p className="text-sm">Create your first startup to begin.</p>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -399,7 +388,7 @@ export default function Dashboard() {
         
         {/* Footer */}
         <footer className="text-center py-4 text-sm text-gray-600 dark:text-gray-400 border-t dark:border-gray-700">
-          <p>&copy; 2023 StartupMatch. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} StartupMatch. All rights reserved.</p>
         </footer>
       </div>
     </div>
