@@ -7,7 +7,9 @@ export const userRoleEnum = pgEnum('user_role', ['investor', 'founder']);
 export const startupStageEnum = pgEnum('startup_stage', ['idea', 'pre_seed', 'seed', 'series_a', 'series_b', 'series_c', 'growth']);
 export const investmentStatusEnum = pgEnum('investment_status', ['pending', 'approved', 'escrow', 'released']);
 export const messageStatusEnum = pgEnum('message_status', ['unread', 'read']);
-export const notificationTypeEnum = pgEnum('notification_type', ['investment', 'message', 'milestone', 'event']);
+export const notificationTypeEnum = pgEnum('notification_type', ['investment', 'message', 'milestone', 'event', 'discussion', 'badge']);
+export const discussionTagEnum = pgEnum('discussion_tag', ['funding', 'startups', 'growth', 'technology', 'hackathon', 'pitch', 'networking', 'investing']);
+export const badgeTypeEnum = pgEnum('badge_type', ['top_contributor', 'innovator', 'growth_hacker', 'mentor', 'hackathon_winner', 'investor_expert']);
 
 // Users table
 export const users = pgTable("users", {
@@ -122,6 +124,80 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Discussion forum table
+export const discussions = pgTable("discussions", {
+  id: serial("id").primaryKey(),
+  authorId: integer("author_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  tag: discussionTagEnum("tag").notNull(),
+  isPinned: boolean("is_pinned").default(false),
+  upvotes: integer("upvotes").default(0),
+  downvotes: integer("downvotes").default(0),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Discussion comments table
+export const discussionComments = pgTable("discussion_comments", {
+  id: serial("id").primaryKey(),
+  discussionId: integer("discussion_id").notNull().references(() => discussions.id),
+  authorId: integer("author_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  upvotes: integer("upvotes").default(0),
+  downvotes: integer("downvotes").default(0),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Discussion votes table
+export const discussionVotes = pgTable("discussion_votes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  discussionId: integer("discussion_id").references(() => discussions.id),
+  commentId: integer("comment_id").references(() => discussionComments.id),
+  voteType: integer("vote_type").notNull(), // 1 for upvote, -1 for downvote
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Hackathon teams table
+export const hackathonTeams = pgTable("hackathon_teams", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  logoUrl: text("logo_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Hackathon team members table
+export const hackathonTeamMembers = pgTable("hackathon_team_members", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => hackathonTeams.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  isLeader: boolean("is_leader").default(false),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+
+// Hackathon chat messages table
+export const hackathonChatMessages = pgTable("hackathon_chat_messages", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => hackathonTeams.id),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Badges table
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: badgeTypeEnum("type").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  iconUrl: text("icon_url"),
+  awardedAt: timestamp("awarded_at").defaultNow().notNull(),
+});
+
 // Zod schemas for insertions
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertStartupSchema = createInsertSchema(startups).omit({ id: true, createdAt: true, currentFunding: true, trendingScore: true });
@@ -133,6 +209,15 @@ export const insertEventSchema = createInsertSchema(events).omit({ id: true, cre
 export const insertEventParticipantSchema = createInsertSchema(eventParticipants).omit({ id: true, createdAt: true });
 export const insertVoteSchema = createInsertSchema(votes).omit({ id: true, createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, read: true });
+
+// Community-related schemas
+export const insertDiscussionSchema = createInsertSchema(discussions).omit({ id: true, createdAt: true, upvotes: true, downvotes: true, isPinned: true, isVerified: true });
+export const insertDiscussionCommentSchema = createInsertSchema(discussionComments).omit({ id: true, createdAt: true, upvotes: true, downvotes: true, isVerified: true });
+export const insertDiscussionVoteSchema = createInsertSchema(discussionVotes).omit({ id: true, createdAt: true });
+export const insertHackathonTeamSchema = createInsertSchema(hackathonTeams).omit({ id: true, createdAt: true });
+export const insertHackathonTeamMemberSchema = createInsertSchema(hackathonTeamMembers).omit({ id: true, joinedAt: true });
+export const insertHackathonChatMessageSchema = createInsertSchema(hackathonChatMessages).omit({ id: true, createdAt: true });
+export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, awardedAt: true });
 
 // Type exports for insertion
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -146,6 +231,15 @@ export type InsertEventParticipant = z.infer<typeof insertEventParticipantSchema
 export type InsertVote = z.infer<typeof insertVoteSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
+// Community-related insertion types
+export type InsertDiscussion = z.infer<typeof insertDiscussionSchema>;
+export type InsertDiscussionComment = z.infer<typeof insertDiscussionCommentSchema>;
+export type InsertDiscussionVote = z.infer<typeof insertDiscussionVoteSchema>;
+export type InsertHackathonTeam = z.infer<typeof insertHackathonTeamSchema>;
+export type InsertHackathonTeamMember = z.infer<typeof insertHackathonTeamMemberSchema>;
+export type InsertHackathonChatMessage = z.infer<typeof insertHackathonChatMessageSchema>;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+
 // Type exports for selection
 export type User = typeof users.$inferSelect;
 export type Startup = typeof startups.$inferSelect;
@@ -157,6 +251,15 @@ export type Event = typeof events.$inferSelect;
 export type EventParticipant = typeof eventParticipants.$inferSelect;
 export type Vote = typeof votes.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+
+// Community-related selection types
+export type Discussion = typeof discussions.$inferSelect;
+export type DiscussionComment = typeof discussionComments.$inferSelect;
+export type DiscussionVote = typeof discussionVotes.$inferSelect;
+export type HackathonTeam = typeof hackathonTeams.$inferSelect;
+export type HackathonTeamMember = typeof hackathonTeamMembers.$inferSelect;
+export type HackathonChatMessage = typeof hackathonChatMessages.$inferSelect;
+export type Badge = typeof badges.$inferSelect;
 
 // Additional login schema
 export const loginSchema = z.object({

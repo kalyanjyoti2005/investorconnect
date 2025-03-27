@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, Search, BanknoteIcon, MessageSquare, 
   Calendar, ArrowUpDown, Settings, HelpCircle, Moon, Sun,
-  Menu, X, LightbulbIcon, BarChart3
+  Menu, X, LightbulbIcon, BarChart3, Users
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";

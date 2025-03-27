@@ -14,7 +14,14 @@ import {
   insertEventSchema, 
   insertEventParticipantSchema, 
   insertVoteSchema, 
-  insertNotificationSchema 
+  insertNotificationSchema,
+  insertDiscussionSchema,
+  insertDiscussionCommentSchema,
+  insertDiscussionVoteSchema,
+  insertHackathonTeamSchema,
+  insertHackathonTeamMemberSchema,
+  insertHackathonChatMessageSchema,
+  insertBadgeSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -599,6 +606,429 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedNotification = await storage.markNotificationAsRead(notificationId);
       res.json(updatedNotification);
     } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Community Discussion routes
+  app.get("/api/discussions", isAuthenticated, async (req, res) => {
+    try {
+      const tag = req.query.tag as string | undefined;
+      const discussions = tag 
+        ? await storage.getDiscussionsByTag(tag)
+        : await storage.getAllDiscussions();
+      res.json(discussions);
+    } catch (error) {
+      console.error("Error fetching discussions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/discussions/:id", isAuthenticated, async (req, res) => {
+    try {
+      const discussionId = parseInt(req.params.id);
+      const discussion = await storage.getDiscussion(discussionId);
+      
+      if (!discussion) {
+        return res.status(404).json({ message: "Discussion not found" });
+      }
+      
+      res.json(discussion);
+    } catch (error) {
+      console.error("Error fetching discussion:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/discussions", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validatedData = insertDiscussionSchema.parse({
+        ...req.body,
+        authorId: userId
+      });
+      
+      const discussion = await storage.createDiscussion(validatedData);
+      res.status(201).json(discussion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating discussion:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/discussions/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const discussionId = parseInt(req.params.id);
+      const comments = await storage.getCommentsByDiscussionId(discussionId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/discussions/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const discussionId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const discussion = await storage.getDiscussion(discussionId);
+      if (!discussion) {
+        return res.status(404).json({ message: "Discussion not found" });
+      }
+      
+      const validatedData = insertDiscussionCommentSchema.parse({
+        ...req.body,
+        discussionId,
+        authorId: userId
+      });
+      
+      const comment = await storage.createDiscussionComment(validatedData);
+      
+      // Create notification for the discussion author (if not the same as comment author)
+      if (discussion.authorId !== userId) {
+        await storage.createNotification({
+          userId: discussion.authorId,
+          type: "discussion",
+          content: `${req.user!.name} commented on your discussion: "${discussion.title}"`,
+          relatedId: discussionId
+        });
+      }
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating comment:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/discussions/:id/vote", isAuthenticated, async (req, res) => {
+    try {
+      const discussionId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { voteType } = req.body;
+      
+      if (typeof voteType !== 'number' || ![1, -1, 0].includes(voteType)) {
+        return res.status(400).json({ message: "voteType must be 1 (upvote), -1 (downvote), or 0 (remove vote)" });
+      }
+      
+      const discussion = await storage.getDiscussion(discussionId);
+      if (!discussion) {
+        return res.status(404).json({ message: "Discussion not found" });
+      }
+      
+      // Check if user already voted on this discussion
+      const existingVote = await storage.getDiscussionVoteByUserAndDiscussion(userId, discussionId);
+      
+      let vote;
+      if (existingVote) {
+        // Update existing vote
+        vote = await storage.updateDiscussionVote(existingVote.id, voteType);
+      } else if (voteType !== 0) {
+        // Create new vote (only if vote type is not 0)
+        vote = await storage.createDiscussionVote({
+          userId,
+          discussionId,
+          voteType,
+          commentId: null
+        });
+      }
+      
+      res.status(201).json(vote || { message: "Vote removed" });
+    } catch (error) {
+      console.error("Error processing vote:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/comments/:id/vote", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { voteType } = req.body;
+      
+      if (typeof voteType !== 'number' || ![1, -1, 0].includes(voteType)) {
+        return res.status(400).json({ message: "voteType must be 1 (upvote), -1 (downvote), or 0 (remove vote)" });
+      }
+      
+      const comment = await storage.getDiscussionComment(commentId);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Check if user already voted on this comment
+      const existingVote = await storage.getDiscussionVoteByUserAndComment(userId, commentId);
+      
+      let vote;
+      if (existingVote) {
+        // Update existing vote
+        vote = await storage.updateDiscussionVote(existingVote.id, voteType);
+      } else if (voteType !== 0) {
+        // Create new vote (only if vote type is not 0)
+        vote = await storage.createDiscussionVote({
+          userId,
+          discussionId: comment.discussionId,
+          commentId,
+          voteType
+        });
+      }
+      
+      res.status(201).json(vote || { message: "Vote removed" });
+    } catch (error) {
+      console.error("Error processing vote:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Hackathon Team routes
+  app.get("/api/hackathon/teams", isAuthenticated, async (req, res) => {
+    try {
+      const teams = await storage.getAllHackathonTeams();
+      res.json(teams);
+    } catch (error) {
+      console.error("Error fetching hackathon teams:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/hackathon/teams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const team = await storage.getHackathonTeam(teamId);
+      
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      res.json(team);
+    } catch (error) {
+      console.error("Error fetching team:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/hackathon/teams", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertHackathonTeamSchema.parse(req.body);
+      const team = await storage.createHackathonTeam(validatedData);
+      
+      // Automatically add the creator as a team leader
+      await storage.createHackathonTeamMember({
+        teamId: team.id,
+        userId: req.user!.id,
+        isLeader: true
+      });
+      
+      res.status(201).json(team);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating team:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/hackathon/teams/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const members = await storage.getHackathonTeamMembersByTeamId(teamId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/hackathon/teams/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const userId = req.body.userId;
+      
+      // Check if team exists
+      const team = await storage.getHackathonTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if user is already a member
+      const members = await storage.getHackathonTeamMembersByTeamId(teamId);
+      const isMember = members.some(member => member.userId === userId);
+      if (isMember) {
+        return res.status(400).json({ message: "User is already a team member" });
+      }
+      
+      // Add member
+      const member = await storage.createHackathonTeamMember({
+        teamId,
+        userId,
+        isLeader: false
+      });
+      
+      // Notify user about team invitation
+      await storage.createNotification({
+        userId,
+        type: "event",
+        content: `You have been added to the hackathon team: ${team.name}`,
+        relatedId: teamId
+      });
+      
+      res.status(201).json(member);
+    } catch (error) {
+      console.error("Error adding team member:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/hackathon/teams/:teamId/members/:memberId/leader", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const memberId = parseInt(req.params.memberId);
+      
+      // Verify team exists
+      const team = await storage.getHackathonTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Verify requester is a team leader
+      const teamMembers = await storage.getHackathonTeamMembersByTeamId(teamId);
+      const currentUserMember = teamMembers.find(member => member.userId === req.user!.id);
+      
+      if (!currentUserMember || !currentUserMember.isLeader) {
+        return res.status(403).json({ message: "Only team leaders can assign leadership" });
+      }
+      
+      // Check if member exists
+      const member = await storage.getHackathonTeamMember(memberId);
+      if (!member || member.teamId !== teamId) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      
+      // Update leadership
+      const updatedMember = await storage.makeTeamLeader(memberId);
+      
+      // Notify user about leadership change
+      await storage.createNotification({
+        userId: member.userId,
+        type: "event",
+        content: `You have been made a leader of the hackathon team: ${team.name}`,
+        relatedId: teamId
+      });
+      
+      res.json(updatedMember);
+    } catch (error) {
+      console.error("Error changing team leadership:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/hackathon/teams/:id/chat", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      
+      // Verify team exists
+      const team = await storage.getHackathonTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Verify user is a team member
+      const teamMembers = await storage.getHackathonTeamMembersByTeamId(teamId);
+      const isMember = teamMembers.some(member => member.userId === req.user!.id);
+      
+      if (!isMember) {
+        return res.status(403).json({ message: "Only team members can access chat" });
+      }
+      
+      // Get messages
+      const messages = await storage.getHackathonChatMessagesByTeamId(teamId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/hackathon/teams/:id/chat", isAuthenticated, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      
+      // Verify team exists
+      const team = await storage.getHackathonTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Verify user is a team member
+      const teamMembers = await storage.getHackathonTeamMembersByTeamId(teamId);
+      const isMember = teamMembers.some(member => member.userId === req.user!.id);
+      
+      if (!isMember) {
+        return res.status(403).json({ message: "Only team members can send messages" });
+      }
+      
+      // Create message
+      const message = await storage.createHackathonChatMessage({
+        teamId,
+        senderId: req.user!.id,
+        content
+      });
+      
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating chat message:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  // Badge routes
+  app.get("/api/badges", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : req.user!.id;
+      const badges = await storage.getBadgesByUserId(userId);
+      res.json(badges);
+    } catch (error) {
+      console.error("Error fetching badges:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/badges", isAuthenticated, async (req, res) => {
+    try {
+      // In a real app, you would validate admin permissions here
+      const validatedData = insertBadgeSchema.parse(req.body);
+      
+      // Check if user exists
+      const user = await storage.getUser(validatedData.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const badge = await storage.createBadge(validatedData);
+      res.status(201).json(badge);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating badge:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

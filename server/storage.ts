@@ -1,7 +1,10 @@
 import {
   users, startups, investments, milestones, ndas, messages, events, eventParticipants, votes, notifications,
+  discussions, discussionComments, discussionVotes, hackathonTeams, hackathonTeamMembers, hackathonChatMessages, badges,
   type User, type Startup, type Investment, type Milestone, type Nda, type Message, type Event, type EventParticipant, type Vote, type Notification,
-  type InsertUser, type InsertStartup, type InsertInvestment, type InsertMilestone, type InsertNda, type InsertMessage, type InsertEvent, type InsertEventParticipant, type InsertVote, type InsertNotification
+  type Discussion, type DiscussionComment, type DiscussionVote, type HackathonTeam, type HackathonTeamMember, type HackathonChatMessage, type Badge,
+  type InsertUser, type InsertStartup, type InsertInvestment, type InsertMilestone, type InsertNda, type InsertMessage, type InsertEvent, type InsertEventParticipant, type InsertVote, type InsertNotification,
+  type InsertDiscussion, type InsertDiscussionComment, type InsertDiscussionVote, type InsertHackathonTeam, type InsertHackathonTeamMember, type InsertHackathonChatMessage, type InsertBadge
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -71,6 +74,50 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
   
+  // Discussion methods
+  getDiscussion(id: number): Promise<Discussion | undefined>;
+  getAllDiscussions(): Promise<Discussion[]>;
+  getDiscussionsByTag(tag: string): Promise<Discussion[]>;
+  getDiscussionsByAuthor(authorId: number): Promise<Discussion[]>;
+  createDiscussion(discussion: InsertDiscussion): Promise<Discussion>;
+  pinDiscussion(id: number): Promise<Discussion | undefined>;
+  verifyDiscussion(id: number): Promise<Discussion | undefined>;
+  
+  // Discussion comment methods
+  getDiscussionComment(id: number): Promise<DiscussionComment | undefined>;
+  getCommentsByDiscussionId(discussionId: number): Promise<DiscussionComment[]>;
+  createDiscussionComment(comment: InsertDiscussionComment): Promise<DiscussionComment>;
+  verifyDiscussionComment(id: number): Promise<DiscussionComment | undefined>;
+  
+  // Discussion vote methods
+  getDiscussionVote(id: number): Promise<DiscussionVote | undefined>;
+  getDiscussionVoteByUserAndDiscussion(userId: number, discussionId: number): Promise<DiscussionVote | undefined>;
+  getDiscussionVoteByUserAndComment(userId: number, commentId: number): Promise<DiscussionVote | undefined>;
+  createDiscussionVote(vote: InsertDiscussionVote): Promise<DiscussionVote>;
+  updateDiscussionVote(id: number, voteType: number): Promise<DiscussionVote | undefined>;
+  
+  // Hackathon team methods
+  getHackathonTeam(id: number): Promise<HackathonTeam | undefined>;
+  getAllHackathonTeams(): Promise<HackathonTeam[]>;
+  createHackathonTeam(team: InsertHackathonTeam): Promise<HackathonTeam>;
+  
+  // Hackathon team member methods
+  getHackathonTeamMember(id: number): Promise<HackathonTeamMember | undefined>;
+  getHackathonTeamMembersByTeamId(teamId: number): Promise<HackathonTeamMember[]>;
+  getHackathonTeamMembersByUserId(userId: number): Promise<HackathonTeamMember[]>;
+  createHackathonTeamMember(member: InsertHackathonTeamMember): Promise<HackathonTeamMember>;
+  makeTeamLeader(id: number): Promise<HackathonTeamMember | undefined>;
+  
+  // Hackathon chat message methods
+  getHackathonChatMessage(id: number): Promise<HackathonChatMessage | undefined>;
+  getHackathonChatMessagesByTeamId(teamId: number): Promise<HackathonChatMessage[]>;
+  createHackathonChatMessage(message: InsertHackathonChatMessage): Promise<HackathonChatMessage>;
+  
+  // Badge methods
+  getBadge(id: number): Promise<Badge | undefined>;
+  getBadgesByUserId(userId: number): Promise<Badge[]>;
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -86,6 +133,15 @@ export class MemStorage implements IStorage {
   private eventParticipantsMap: Map<number, EventParticipant>;
   private votesMap: Map<number, Vote>;
   private notificationsMap: Map<number, Notification>;
+  
+  // Community-related maps
+  private discussionsMap: Map<number, Discussion>;
+  private discussionCommentsMap: Map<number, DiscussionComment>;
+  private discussionVotesMap: Map<number, DiscussionVote>;
+  private hackathonTeamsMap: Map<number, HackathonTeam>;
+  private hackathonTeamMembersMap: Map<number, HackathonTeamMember>;
+  private hackathonChatMessagesMap: Map<number, HackathonChatMessage>;
+  private badgesMap: Map<number, Badge>;
 
   sessionStore: session.Store;
   
@@ -99,6 +155,15 @@ export class MemStorage implements IStorage {
   private eventParticipantIdCounter: number = 1;
   private voteIdCounter: number = 1;
   private notificationIdCounter: number = 1;
+  
+  // Community-related counters
+  private discussionIdCounter: number = 1;
+  private discussionCommentIdCounter: number = 1;
+  private discussionVoteIdCounter: number = 1;
+  private hackathonTeamIdCounter: number = 1;
+  private hackathonTeamMemberIdCounter: number = 1;
+  private hackathonChatMessageIdCounter: number = 1;
+  private badgeIdCounter: number = 1;
 
   constructor() {
     this.usersMap = new Map();
@@ -111,6 +176,15 @@ export class MemStorage implements IStorage {
     this.eventParticipantsMap = new Map();
     this.votesMap = new Map();
     this.notificationsMap = new Map();
+    
+    // Initialize community-related maps
+    this.discussionsMap = new Map();
+    this.discussionCommentsMap = new Map();
+    this.discussionVotesMap = new Map();
+    this.hackathonTeamsMap = new Map();
+    this.hackathonTeamMembersMap = new Map();
+    this.hackathonChatMessagesMap = new Map();
+    this.badgesMap = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
@@ -459,6 +533,319 @@ export class MemStorage implements IStorage {
     const updatedNotification = { ...notification, read: true };
     this.notificationsMap.set(id, updatedNotification);
     return updatedNotification;
+  }
+  
+  // Discussion methods
+  async getDiscussion(id: number): Promise<Discussion | undefined> {
+    return this.discussionsMap.get(id);
+  }
+  
+  async getAllDiscussions(): Promise<Discussion[]> {
+    return Array.from(this.discussionsMap.values())
+      .sort((a, b) => {
+        // Sort by pinned first, then by newest
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
+  
+  async getDiscussionsByTag(tag: string): Promise<Discussion[]> {
+    return Array.from(this.discussionsMap.values())
+      .filter((discussion) => discussion.tag === tag)
+      .sort((a, b) => {
+        // Sort by pinned first, then by newest
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
+  
+  async getDiscussionsByAuthor(authorId: number): Promise<Discussion[]> {
+    return Array.from(this.discussionsMap.values())
+      .filter((discussion) => discussion.authorId === authorId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async createDiscussion(discussion: InsertDiscussion): Promise<Discussion> {
+    const id = this.discussionIdCounter++;
+    const now = new Date();
+    const newDiscussion: Discussion = {
+      ...discussion,
+      id,
+      createdAt: now,
+      isPinned: false,
+      upvotes: 0,
+      downvotes: 0,
+      isVerified: false
+    };
+    this.discussionsMap.set(id, newDiscussion);
+    return newDiscussion;
+  }
+  
+  async pinDiscussion(id: number): Promise<Discussion | undefined> {
+    const discussion = await this.getDiscussion(id);
+    if (!discussion) return undefined;
+    
+    const updatedDiscussion = { ...discussion, isPinned: true };
+    this.discussionsMap.set(id, updatedDiscussion);
+    return updatedDiscussion;
+  }
+  
+  async verifyDiscussion(id: number): Promise<Discussion | undefined> {
+    const discussion = await this.getDiscussion(id);
+    if (!discussion) return undefined;
+    
+    const updatedDiscussion = { ...discussion, isVerified: true };
+    this.discussionsMap.set(id, updatedDiscussion);
+    return updatedDiscussion;
+  }
+  
+  // Discussion comment methods
+  async getDiscussionComment(id: number): Promise<DiscussionComment | undefined> {
+    return this.discussionCommentsMap.get(id);
+  }
+  
+  async getCommentsByDiscussionId(discussionId: number): Promise<DiscussionComment[]> {
+    return Array.from(this.discussionCommentsMap.values())
+      .filter((comment) => comment.discussionId === discussionId)
+      .sort((a, b) => {
+        // Sort verified comments first, then by most upvotes, then by newest
+        if (a.isVerified && !b.isVerified) return -1;
+        if (!a.isVerified && b.isVerified) return 1;
+        
+        const aScore = a.upvotes - a.downvotes;
+        const bScore = b.upvotes - b.downvotes;
+        if (aScore !== bScore) return bScore - aScore;
+        
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
+  }
+  
+  async createDiscussionComment(comment: InsertDiscussionComment): Promise<DiscussionComment> {
+    const id = this.discussionCommentIdCounter++;
+    const now = new Date();
+    const newComment: DiscussionComment = {
+      ...comment,
+      id,
+      createdAt: now,
+      upvotes: 0,
+      downvotes: 0,
+      isVerified: false
+    };
+    this.discussionCommentsMap.set(id, newComment);
+    return newComment;
+  }
+  
+  async verifyDiscussionComment(id: number): Promise<DiscussionComment | undefined> {
+    const comment = await this.getDiscussionComment(id);
+    if (!comment) return undefined;
+    
+    const updatedComment = { ...comment, isVerified: true };
+    this.discussionCommentsMap.set(id, updatedComment);
+    return updatedComment;
+  }
+  
+  // Discussion vote methods
+  async getDiscussionVote(id: number): Promise<DiscussionVote | undefined> {
+    return this.discussionVotesMap.get(id);
+  }
+  
+  async getDiscussionVoteByUserAndDiscussion(userId: number, discussionId: number): Promise<DiscussionVote | undefined> {
+    return Array.from(this.discussionVotesMap.values()).find(
+      (vote) => vote.userId === userId && vote.discussionId === discussionId && !vote.commentId
+    );
+  }
+  
+  async getDiscussionVoteByUserAndComment(userId: number, commentId: number): Promise<DiscussionVote | undefined> {
+    return Array.from(this.discussionVotesMap.values()).find(
+      (vote) => vote.userId === userId && vote.commentId === commentId
+    );
+  }
+  
+  async createDiscussionVote(vote: InsertDiscussionVote): Promise<DiscussionVote> {
+    const id = this.discussionVoteIdCounter++;
+    const now = new Date();
+    const newVote: DiscussionVote = { ...vote, id, createdAt: now };
+    this.discussionVotesMap.set(id, newVote);
+    
+    // Update discussion or comment vote counts
+    if (vote.discussionId && !vote.commentId) {
+      const discussion = await this.getDiscussion(vote.discussionId);
+      if (discussion) {
+        const updatedDiscussion = { 
+          ...discussion, 
+          upvotes: vote.voteType > 0 ? discussion.upvotes + 1 : discussion.upvotes,
+          downvotes: vote.voteType < 0 ? discussion.downvotes + 1 : discussion.downvotes
+        };
+        this.discussionsMap.set(discussion.id, updatedDiscussion);
+      }
+    } else if (vote.commentId) {
+      const comment = await this.getDiscussionComment(vote.commentId);
+      if (comment) {
+        const updatedComment = { 
+          ...comment, 
+          upvotes: vote.voteType > 0 ? comment.upvotes + 1 : comment.upvotes,
+          downvotes: vote.voteType < 0 ? comment.downvotes + 1 : comment.downvotes
+        };
+        this.discussionCommentsMap.set(comment.id, updatedComment);
+      }
+    }
+    
+    return newVote;
+  }
+  
+  async updateDiscussionVote(id: number, voteType: number): Promise<DiscussionVote | undefined> {
+    const vote = await this.getDiscussionVote(id);
+    if (!vote) return undefined;
+    
+    const oldVoteType = vote.voteType;
+    const updatedVote = { ...vote, voteType };
+    this.discussionVotesMap.set(id, updatedVote);
+    
+    // Update discussion or comment vote counts
+    if (vote.discussionId && !vote.commentId) {
+      const discussion = await this.getDiscussion(vote.discussionId);
+      if (discussion) {
+        const updatedDiscussion = { 
+          ...discussion, 
+          upvotes: oldVoteType > 0 ? discussion.upvotes - 1 : voteType > 0 ? discussion.upvotes + 1 : discussion.upvotes,
+          downvotes: oldVoteType < 0 ? discussion.downvotes - 1 : voteType < 0 ? discussion.downvotes + 1 : discussion.downvotes
+        };
+        this.discussionsMap.set(discussion.id, updatedDiscussion);
+      }
+    } else if (vote.commentId) {
+      const comment = await this.getDiscussionComment(vote.commentId);
+      if (comment) {
+        const updatedComment = { 
+          ...comment, 
+          upvotes: oldVoteType > 0 ? comment.upvotes - 1 : voteType > 0 ? comment.upvotes + 1 : comment.upvotes,
+          downvotes: oldVoteType < 0 ? comment.downvotes - 1 : voteType < 0 ? comment.downvotes + 1 : comment.downvotes
+        };
+        this.discussionCommentsMap.set(comment.id, updatedComment);
+      }
+    }
+    
+    return updatedVote;
+  }
+  
+  // Hackathon team methods
+  async getHackathonTeam(id: number): Promise<HackathonTeam | undefined> {
+    return this.hackathonTeamsMap.get(id);
+  }
+  
+  async getAllHackathonTeams(): Promise<HackathonTeam[]> {
+    return Array.from(this.hackathonTeamsMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  async createHackathonTeam(team: InsertHackathonTeam): Promise<HackathonTeam> {
+    const id = this.hackathonTeamIdCounter++;
+    const now = new Date();
+    const newTeam: HackathonTeam = { ...team, id, createdAt: now };
+    this.hackathonTeamsMap.set(id, newTeam);
+    return newTeam;
+  }
+  
+  // Hackathon team member methods
+  async getHackathonTeamMember(id: number): Promise<HackathonTeamMember | undefined> {
+    return this.hackathonTeamMembersMap.get(id);
+  }
+  
+  async getHackathonTeamMembersByTeamId(teamId: number): Promise<HackathonTeamMember[]> {
+    return Array.from(this.hackathonTeamMembersMap.values())
+      .filter((member) => member.teamId === teamId)
+      .sort((a, b) => {
+        // Sort leaders first, then by join date
+        if (a.isLeader && !b.isLeader) return -1;
+        if (!a.isLeader && b.isLeader) return 1;
+        return a.joinedAt.getTime() - b.joinedAt.getTime();
+      });
+  }
+  
+  async getHackathonTeamMembersByUserId(userId: number): Promise<HackathonTeamMember[]> {
+    return Array.from(this.hackathonTeamMembersMap.values())
+      .filter((member) => member.userId === userId)
+      .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime());
+  }
+  
+  async createHackathonTeamMember(member: InsertHackathonTeamMember): Promise<HackathonTeamMember> {
+    const id = this.hackathonTeamMemberIdCounter++;
+    const now = new Date();
+    const newMember: HackathonTeamMember = { 
+      ...member, 
+      id, 
+      joinedAt: now, 
+      isLeader: member.isLeader || false 
+    };
+    this.hackathonTeamMembersMap.set(id, newMember);
+    return newMember;
+  }
+  
+  async makeTeamLeader(id: number): Promise<HackathonTeamMember | undefined> {
+    const member = await this.getHackathonTeamMember(id);
+    if (!member) return undefined;
+    
+    // First, remove leader status from any existing team leader
+    const teamMembers = await this.getHackathonTeamMembersByTeamId(member.teamId);
+    const currentLeader = teamMembers.find((m) => m.isLeader);
+    
+    if (currentLeader && currentLeader.id !== id) {
+      const updatedCurrentLeader = { ...currentLeader, isLeader: false };
+      this.hackathonTeamMembersMap.set(currentLeader.id, updatedCurrentLeader);
+    }
+    
+    // Set the new leader
+    const updatedMember = { ...member, isLeader: true };
+    this.hackathonTeamMembersMap.set(id, updatedMember);
+    return updatedMember;
+  }
+  
+  // Hackathon chat message methods
+  async getHackathonChatMessage(id: number): Promise<HackathonChatMessage | undefined> {
+    return this.hackathonChatMessagesMap.get(id);
+  }
+  
+  async getHackathonChatMessagesByTeamId(teamId: number): Promise<HackathonChatMessage[]> {
+    return Array.from(this.hackathonChatMessagesMap.values())
+      .filter((message) => message.teamId === teamId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+  
+  async createHackathonChatMessage(message: InsertHackathonChatMessage): Promise<HackathonChatMessage> {
+    const id = this.hackathonChatMessageIdCounter++;
+    const now = new Date();
+    const newMessage: HackathonChatMessage = { ...message, id, createdAt: now };
+    this.hackathonChatMessagesMap.set(id, newMessage);
+    return newMessage;
+  }
+  
+  // Badge methods
+  async getBadge(id: number): Promise<Badge | undefined> {
+    return this.badgesMap.get(id);
+  }
+  
+  async getBadgesByUserId(userId: number): Promise<Badge[]> {
+    return Array.from(this.badgesMap.values())
+      .filter((badge) => badge.userId === userId)
+      .sort((a, b) => b.awardedAt.getTime() - a.awardedAt.getTime());
+  }
+  
+  async createBadge(badge: InsertBadge): Promise<Badge> {
+    const id = this.badgeIdCounter++;
+    const now = new Date();
+    const newBadge: Badge = { ...badge, id, awardedAt: now };
+    this.badgesMap.set(id, newBadge);
+    
+    // Create a notification for the user
+    await this.createNotification({
+      userId: badge.userId,
+      type: 'badge',
+      content: `You've earned the "${badge.name}" badge!`,
+      relatedId: id
+    });
+    
+    return newBadge;
   }
 }
 
