@@ -72,7 +72,7 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -87,7 +87,7 @@ export class MemStorage implements IStorage {
   private votesMap: Map<number, Vote>;
   private notificationsMap: Map<number, Notification>;
 
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
   
   private userIdCounter: number = 1;
   private startupIdCounter: number = 1;
@@ -114,7 +114,7 @@ export class MemStorage implements IStorage {
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
-    });
+    }) as any;
   }
 
   // User methods
@@ -462,4 +462,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./database-storage";
+
+// Comment out MemStorage and use DatabaseStorage instead
+// export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

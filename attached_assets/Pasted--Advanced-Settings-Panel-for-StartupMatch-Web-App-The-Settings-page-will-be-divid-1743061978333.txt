@@ -1,0 +1,113 @@
+### **⚙️ Advanced Settings Panel for StartupMatch Web App**  
+
+The **Settings** page will be divided into multiple sections based on **user roles** (Startup Founder, Investor, and Admin). Each role will have access to specific **profile, security, notifications, and preferences** settings.  
+
+---
+
+## **🔹 General Settings (All Users)**  
+📌 **Profile Settings**  
+✔️ Change profile picture, name, and bio  
+✔️ Update industry interests (Tech, Finance, AI, etc.)  
+✔️ Change account role (if applicable)  
+
+📌 **Account Visibility & Privacy**  
+✔️ Choose profile visibility: **Public, Private, or NDA-Protected**  
+✔️ Control who can message you (Everyone, Verified Users, Investors Only)  
+✔️ Enable/Disable profile from appearing in startup/investor search  
+
+📌 **Language & Theme**  
+✔️ Dark/Light mode toggle  
+✔️ Select app language (English, Hindi, etc.)  
+
+---
+
+## **🔹 Security Settings (All Users)**  
+📌 **Password & Authentication**  
+✔️ Change password (with OTP verification)  
+✔️ View login history & active sessions  
+✔️ Enable/Disable **Two-Factor Authentication (2FA)**  
+
+📌 **Device & Session Management**  
+✔️ List of logged-in devices (Desktop, Mobile, Tablet)  
+✔️ Option to **log out from all devices** remotely  
+✔️ IP and location tracking for suspicious logins  
+
+📌 **KYC & Verification**  
+✔️ Upload ID proof (For investors & founders)  
+✔️ Blockchain timestamp for **identity verification**  
+✔️ Status of KYC: **Pending, Approved, Rejected**  
+
+---
+
+## **🔹 Investor-Specific Settings**  
+📌 **Investment Preferences**  
+✔️ Set investment range (e.g., **$10K – $500K**)  
+✔️ Choose preferred industries (**Fintech, AI, Healthcare, etc.**)  
+✔️ Enable automatic notifications for **new high-potential startups**  
+
+📌 **Escrow & Payment Settings**  
+✔️ Linked payment methods (Bank, UPI, Crypto, Stripe, PayPal)  
+✔️ Auto-withdrawal settings for escrow fund releases  
+✔️ Review transaction history & dispute resolution settings  
+
+📌 **Investor Visibility Controls**  
+✔️ Choose if startups can see your investment portfolio  
+✔️ Control who can **pitch ideas** to you (All startups, Only NDA startups)  
+
+---
+
+## **🔹 Startup Founder-Specific Settings**  
+📌 **Startup Profile & NDA Controls**  
+✔️ Manage uploaded startup ideas  
+✔️ Control NDA requirement (Mandatory/Optional)  
+✔️ Restrict access to confidential documents  
+
+📌 **Funding & Escrow Controls**  
+✔️ Manage funding milestones & withdrawal requests  
+✔️ Dispute resolution settings (Investor disputes, Admin intervention)  
+
+📌 **Business Plan & AI Reports**  
+✔️ Upload & edit **pitch deck, business plan, SWOT analysis**  
+✔️ Enable AI-powered **funding success prediction**  
+
+---
+
+## **🔹 Notification & Messaging Settings**  
+📌 **Email & Push Notifications**  
+✔️ Enable/disable updates for **new messages, investment offers, funding progress**  
+✔️ Set preferred contact method: **Email, SMS, App Notifications**  
+
+📌 **Chat & Messaging Privacy**  
+✔️ Allow only **verified investors/founders** to send messages  
+✔️ Auto-delete old messages after **X days**  
+
+📌 **Community & Hackathon Alerts**  
+✔️ Subscribe to hackathon events & updates  
+✔️ Get alerts when an investor or founder joins a discussion  
+
+---
+
+## **🔹 Admin-Only Settings**  
+📌 **User & Role Management**  
+✔️ Approve/reject **user KYC**  
+✔️ Suspend or **blacklist fraudulent users**  
+
+📌 **Transaction & Escrow Settings**  
+✔️ Set **escrow holding period** before fund release  
+✔️ Manage **payment disputes** and refund policies  
+
+📌 **Platform Configuration**  
+✔️ Adjust **transaction fees & revenue share**  
+✔️ Manage **API keys & third-party integrations**  
+✔️ Monitor **security logs & fraud detection**  
+
+---
+
+### **🔥 Additional Features for Future Enhancements**  
+🚀 **Auto KYC verification with AI**  
+🚀 **Integration with LinkedIn for investor verification**  
+🚀 **Custom alerts based on funding activity**  
+
+---
+
+This **Settings Page** will be designed for a **seamless experience with advanced controls**. Do you want a **Figma UI first**, or should I start on the **React frontend implementation**? 🚀
