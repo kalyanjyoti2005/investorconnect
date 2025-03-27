@@ -5,8 +5,8 @@ import { useInView } from "react-intersection-observer";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Button } from "@/components/ui/button";
-import { FiArrowRight, FiCheck, FiLock, FiDollarSign, FiUsers, FiBriefcase, FiDatabase, FiShield } from "react-icons/fi";
-import { SiBlockchaindotcom } from "react-icons/si";
+import { FiArrowRight, FiCheck, FiLock, FiDollarSign, FiUsers, FiBriefcase, FiDatabase, FiShield, FiSmartphone, FiDownload } from "react-icons/fi";
+import { SiBlockchaindotcom, SiAppstore, SiGoogleplay } from "react-icons/si";
 
 import LottieAnimation from "@/components/ui/lottie-animation";
 import handshakeAnimation from "@/assets/animations/handshake.json";
@@ -936,6 +936,284 @@ const LivePreviewSection = () => {
   );
 };
 
+const ComingSoonAppSection = () => {
+  const phoneRef = useRef<HTMLDivElement>(null);
+  const screensRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!phoneRef.current || !screensRef.current) return;
+
+    // Timeline for phone animation
+    const phoneTimeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: phoneRef.current,
+        start: "top 70%",
+        end: "bottom 20%",
+        toggleActions: "play none none reverse",
+      }
+    });
+
+    phoneTimeline
+      .from(phoneRef.current, {
+        y: 100,
+        opacity: 0,
+        duration: 0.8,
+        ease: "power2.out"
+      })
+      .from(".phone-screen", {
+        opacity: 0,
+        scale: 0.9,
+        duration: 0.5,
+        stagger: 0.2,
+        ease: "power1.out"
+      }, "-=0.4");
+
+    // Screens sliding animation
+    gsap.fromTo(screensRef.current,
+      { x: -20 },
+      { 
+        x: -220, 
+        scrollTrigger: {
+          trigger: screensRef.current,
+          start: "top 60%",
+          end: "bottom 20%",
+          scrub: true,
+        }
+      }
+    );
+
+    return () => {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    };
+  }, []);
+
+  const appFeatures = [
+    {
+      title: "Real-time Notifications",
+      description: "Get instant alerts on investment opportunities, milestone achievements, and important updates",
+      icon: <FiSmartphone className="w-6 h-6 text-primary" />,
+    },
+    {
+      title: "Mobile Document Signing",
+      description: "Sign NDAs and investment contracts securely from anywhere with our digital signature feature",
+      icon: <FiCheck className="w-6 h-6 text-primary" />,
+    },
+    {
+      title: "Offline Pitch Deck Access",
+      description: "View startup presentations and investor portfolios even without an internet connection",
+      icon: <FiDownload className="w-6 h-6 text-primary" />,
+    },
+  ];
+
+  return (
+    <section id="mobile-app" className="py-24 bg-gradient-to-br from-primary/10 via-background to-background relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute top-0 left-0 w-full h-full">
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-40 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="inline-block text-sm font-medium py-1 px-3 bg-primary/10 text-primary rounded-full mb-4"
+          >
+            Coming Soon
+          </motion.div>
+
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            viewport={{ once: true }}
+            className="text-3xl md:text-4xl font-bold mb-4"
+          >
+            StartupMatch Mobile App
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+            viewport={{ once: true }}
+            className="text-lg text-muted-foreground"
+          >
+            Take your startup investing experience on the go with our upcoming mobile application
+          </motion.p>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16">
+          {/* App Features */}
+          <div className="w-full md:w-1/2 order-2 md:order-1">
+            <div className="space-y-6">
+              {appFeatures.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="flex gap-4 bg-card border border-border rounded-xl p-6 shadow-sm"
+                >
+                  <div className="bg-primary/10 p-3 rounded-full h-12 w-12 flex items-center justify-center">
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg mb-1">{feature.title}</h3>
+                    <p className="text-muted-foreground text-sm">{feature.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                viewport={{ once: true }}
+                className="flex flex-col sm:flex-row gap-4 mt-8"
+              >
+                <Button className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:opacity-90 transition-opacity">
+                  <SiAppstore className="mr-2 h-5 w-5" /> App Store
+                </Button>
+                <Button variant="outline" className="bg-gradient-to-r from-card to-background">
+                  <SiGoogleplay className="mr-2 h-5 w-5" /> Google Play
+                </Button>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Phone Mockup */}
+          <div className="w-full md:w-1/2 order-1 md:order-2 relative" style={{ height: "500px" }}>
+            <div ref={phoneRef} className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] h-[560px] bg-black rounded-[36px] border-[8px] border-gray-800 shadow-2xl overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-6 bg-black z-10 flex items-center justify-center">
+                <div className="w-20 h-4 bg-black rounded-b-xl"></div>
+              </div>
+              
+              <div className="h-full w-full overflow-hidden bg-gradient-to-b from-primary/90 to-primary/50">
+                {/* Scrolling App Screens */}
+                <div ref={screensRef} className="flex gap-4 mt-8 pl-4" style={{ width: "800px" }}>
+                  {/* Dashboard Screen */}
+                  <div className="phone-screen w-[250px] h-[500px] bg-background rounded-lg shadow-lg p-3 flex flex-col">
+                    <div className="h-6 flex items-center mb-2">
+                      <div className="w-24 h-3 bg-primary/20 rounded-full"></div>
+                      <div className="ml-auto flex space-x-1">
+                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
+                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-primary mb-2">Dashboard</div>
+                    <div className="w-full h-24 bg-primary/10 rounded mb-3 flex items-center justify-center">
+                      <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
+                        <span className="text-2xl">📈</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="h-16 bg-primary/5 rounded p-2">
+                        <div className="w-12 h-2 bg-primary/20 rounded mb-1"></div>
+                        <div className="w-8 h-4 bg-primary/30 rounded"></div>
+                      </div>
+                      <div className="h-16 bg-primary/5 rounded p-2">
+                        <div className="w-12 h-2 bg-primary/20 rounded mb-1"></div>
+                        <div className="w-10 h-4 bg-primary/30 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="flex-1 bg-primary/5 rounded p-2">
+                      <div className="w-full h-3 bg-primary/20 rounded mb-2"></div>
+                      <div className="w-full h-3 bg-primary/10 rounded mb-2"></div>
+                      <div className="w-3/4 h-3 bg-primary/10 rounded"></div>
+                    </div>
+                    <div className="h-12 bg-card mt-2 rounded flex items-center justify-around">
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/40 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                    </div>
+                  </div>
+                  
+                  {/* Startups Screen */}
+                  <div className="phone-screen w-[250px] h-[500px] bg-background rounded-lg shadow-lg p-3 flex flex-col">
+                    <div className="h-6 flex items-center mb-2">
+                      <div className="w-24 h-3 bg-primary/20 rounded-full"></div>
+                      <div className="ml-auto flex space-x-1">
+                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
+                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-primary mb-2">Startups</div>
+                    <div className="flex-1 space-y-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-full h-24 bg-primary/5 rounded p-2 flex">
+                          <div className="w-12 h-12 bg-primary/20 rounded flex items-center justify-center">
+                            <span className="text-sm">💡</span>
+                          </div>
+                          <div className="ml-2 flex-1">
+                            <div className="w-24 h-2 bg-primary/30 rounded mb-1"></div>
+                            <div className="w-full h-2 bg-primary/10 rounded mb-1"></div>
+                            <div className="w-full h-2 bg-primary/10 rounded mb-1"></div>
+                            <div className="w-1/2 h-2 bg-primary/10 rounded"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="h-12 bg-card mt-2 rounded flex items-center justify-around">
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/40 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                    </div>
+                  </div>
+                  
+                  {/* Messaging Screen */}
+                  <div className="phone-screen w-[250px] h-[500px] bg-background rounded-lg shadow-lg p-3 flex flex-col">
+                    <div className="h-6 flex items-center mb-2">
+                      <div className="w-24 h-3 bg-primary/20 rounded-full"></div>
+                      <div className="ml-auto flex space-x-1">
+                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
+                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-primary mb-2">Messages</div>
+                    
+                    <div className="flex-1 flex flex-col">
+                      <div className="w-3/4 ml-auto h-10 bg-primary/40 rounded-xl rounded-tr-none mb-3 p-2">
+                        <div className="w-full h-full bg-primary/20 rounded"></div>
+                      </div>
+                      <div className="w-3/4 h-10 bg-primary/10 rounded-xl rounded-tl-none mb-3 p-2">
+                        <div className="w-full h-full bg-primary/5 rounded"></div>
+                      </div>
+                      <div className="w-3/4 h-10 bg-primary/10 rounded-xl rounded-tl-none mb-3 p-2">
+                        <div className="w-full h-full bg-primary/5 rounded"></div>
+                      </div>
+                      <div className="w-3/4 ml-auto h-10 bg-primary/40 rounded-xl rounded-tr-none p-2">
+                        <div className="w-full h-full bg-primary/20 rounded"></div>
+                      </div>
+                    </div>
+                    
+                    <div className="h-10 bg-primary/5 rounded-full mt-2 flex items-center px-3">
+                      <div className="w-full h-2 bg-primary/20 rounded-full"></div>
+                      <div className="w-6 h-6 bg-primary/30 rounded-full ml-2"></div>
+                    </div>
+                    
+                    <div className="h-12 bg-card mt-2 rounded flex items-center justify-around">
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
+                      <div className="w-6 h-6 bg-primary/40 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const CallToActionSection = () => {
   const [, navigate] = useLocation();
   
@@ -1085,6 +1363,7 @@ export default function LandingPageAnimated() {
         <KeyFeaturesSection />
         <FundingAnimationSection />
         <LivePreviewSection />
+        <ComingSoonAppSection />
         <CallToActionSection />
       </main>
 
