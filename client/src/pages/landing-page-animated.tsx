@@ -54,6 +54,250 @@ const pulseVariants: Variants = {
   }
 };
 
+const RocketLaunchSection = () => {
+  const rocketRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const cloudsRef = useRef<HTMLDivElement>(null);
+  const starsRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!rocketRef.current || !sectionRef.current || !cloudsRef.current || !starsRef.current) return;
+    
+    // Initialize GSAP animations
+    const rocket = rocketRef.current;
+    const clouds = cloudsRef.current;
+    const stars = starsRef.current;
+    
+    // Set initial positions
+    gsap.set(rocket, { y: 100, scale: 0.8 });
+    gsap.set(clouds, { y: -50, opacity: 0 });
+    gsap.set(stars, { opacity: 0 });
+    
+    // Create a timeline for the initial animation
+    const initialTimeline = gsap.timeline();
+    initialTimeline
+      .to(rocket, { y: 0, scale: 1, duration: 1.5, ease: "elastic.out(1, 0.5)" })
+      .to(clouds, { y: 0, opacity: 0.8, duration: 1, stagger: 0.2, ease: "power2.out" }, "-=1")
+      .to(stars, { opacity: 0.8, duration: 1, ease: "power2.out" }, "-=0.5");
+    
+    // Create scroll-based animation
+    gsap.to(rocket, {
+      y: -200,
+      scale: 1.1,
+      rotation: 5,
+      scrollTrigger: {
+        trigger: sectionRef.current,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: true,
+      }
+    });
+    
+    // Parallax effect on clouds
+    gsap.to(clouds.children, {
+      y: -30,
+      opacity: 0.3,
+      scrollTrigger: {
+        trigger: sectionRef.current,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: true,
+      }
+    });
+    
+    // Stars parallax effect
+    gsap.to(stars.children, {
+      y: -50,
+      scrollTrigger: {
+        trigger: sectionRef.current,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: true,
+      }
+    });
+    
+    return () => {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    };
+  }, []);
+  
+  // Generate random stars
+  const starCount = 50;
+  const stars = Array.from({ length: starCount }).map((_, i) => {
+    const size = Math.random() * 4 + 1;
+    const top = Math.random() * 100;
+    const left = Math.random() * 100;
+    const delay = Math.random() * 5;
+    
+    return (
+      <div 
+        key={i}
+        className="absolute rounded-full bg-white"
+        style={{ 
+          width: `${size}px`, 
+          height: `${size}px`, 
+          top: `${top}%`, 
+          left: `${left}%`,
+          opacity: Math.random() * 0.5 + 0.3,
+          animation: `twinkle 5s infinite ${delay}s`
+        }}
+      />
+    );
+  });
+  
+  return (
+    <section 
+      id="rocket-launch" 
+      ref={sectionRef}
+      className="relative h-[60vh] overflow-hidden bg-gradient-to-b from-background via-primary/10 to-primary/5"
+    >
+      {/* Stars */}
+      <div ref={starsRef} className="absolute inset-0 z-0">
+        {stars}
+      </div>
+      
+      {/* Clouds */}
+      <div ref={cloudsRef} className="absolute inset-0 z-10">
+        <div className="absolute top-[60%] left-[10%] w-40 h-20 bg-white/30 rounded-full blur-xl"></div>
+        <div className="absolute top-[65%] left-[30%] w-60 h-24 bg-white/20 rounded-full blur-xl"></div>
+        <div className="absolute top-[70%] left-[60%] w-40 h-16 bg-white/25 rounded-full blur-xl"></div>
+        <div className="absolute top-[75%] left-[80%] w-32 h-16 bg-white/15 rounded-full blur-xl"></div>
+      </div>
+      
+      {/* Rocket */}
+      <div className="container mx-auto px-4 h-full relative z-20 flex items-center justify-center">
+        {/* Rocket Text */}
+        <div className="absolute left-10 top-1/4 max-w-md text-left">
+          <motion.h2 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="text-3xl md:text-4xl font-bold mb-4"
+          >
+            Launch Your Startup <span className="text-primary">To New Heights</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1, delay: 0.7 }}
+            className="text-lg text-muted-foreground"
+          >
+            StartupMatch provides the perfect launchpad for your business ideas with access to investors, resources, and guidance
+          </motion.p>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1 }}
+          >
+            <div className="mt-6 flex gap-4">
+              <div className="bg-card border border-border rounded-lg p-3 flex items-center">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary mr-3">
+                  <FiArrowRight className="w-5 h-5" />
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium">Quick Launch</p>
+                  <p className="text-muted-foreground">Setup in minutes</p>
+                </div>
+              </div>
+              
+              <div className="bg-card border border-border rounded-lg p-3 flex items-center">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary mr-3">
+                  <FiUsers className="w-5 h-5" />
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium">Connect</p>
+                  <p className="text-muted-foreground">With investors</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+        
+        {/* Rocket SVG */}
+        <div ref={rocketRef} className="relative transform-gpu will-change-transform">
+          <svg width="200" height="400" viewBox="0 0 200 400" fill="none" xmlns="http://www.w3.org/2000/svg" className="rocket">
+            {/* Rocket Flames */}
+            <motion.g
+              animate={{ 
+                scaleY: [1, 1.5, 1],
+                opacity: [0.7, 1, 0.7]
+              }}
+              transition={{ 
+                duration: 0.8,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <path d="M85 350 L100 390 L115 350 Z" fill="url(#fireGradient)" />
+              <path d="M90 350 L100 370 L110 350 Z" fill="url(#fireGradient2)" />
+            </motion.g>
+            
+            {/* Rocket Body */}
+            <path d="M80 200 L80 340 L120 340 L120 200 Z" fill="#f0f0f0" stroke="#e1e1e1" strokeWidth="2" />
+            <path d="M80 200 Q80 180 100 180 Q120 180 120 200 Z" fill="#f0f0f0" stroke="#e1e1e1" strokeWidth="2" />
+            <rect x="80" y="240" width="40" height="20" fill="#e1e1e1" />
+            
+            {/* Rocket Windows */}
+            <circle cx="100" cy="220" r="10" fill="#80A0FF" stroke="#6080FF" strokeWidth="2" />
+            <circle cx="100" cy="220" r="5" fill="#6080FF" />
+            
+            {/* Rocket Fins */}
+            <path d="M120 280 L140 310 L140 340 L120 340 Z" fill="hsl(258 75% 65%)" />
+            <path d="M80 280 L60 310 L60 340 L80 340 Z" fill="hsl(258 75% 65%)" />
+            
+            {/* Rocket Nose Cone */}
+            <path d="M80 180 Q100 120 120 180 Z" fill="hsl(258 75% 65%)" />
+            
+            {/* Rocket Details */}
+            <text x="91" y="300" fill="hsl(258 75% 65%)" className="font-bold text-xs">START</text>
+            <text x="90" y="315" fill="hsl(258 75% 65%)" className="font-bold text-xs">UP</text>
+
+            {/* Gradients for flames */}
+            <defs>
+              <linearGradient id="fireGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#FF4" />
+                <stop offset="100%" stopColor="#F40" />
+              </linearGradient>
+              <linearGradient id="fireGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#FFF" />
+                <stop offset="100%" stopColor="#FF4" />
+              </linearGradient>
+            </defs>
+          </svg>
+          
+          {/* Smoke particles */}
+          <motion.div
+            className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-20 h-20"
+            initial="hidden"
+            animate="visible"
+          >
+            {Array.from({ length: 8 }).map((_, index) => (
+              <motion.div
+                key={index}
+                className="absolute w-4 h-4 bg-white/20 rounded-full"
+                initial={{ y: 0, opacity: 0.8, scale: 0.5 }}
+                animate={{ 
+                  y: [0, -20 - Math.random() * 20],
+                  x: [0, (Math.random() - 0.5) * 30],
+                  opacity: [0.8, 0],
+                  scale: [0.5, 1 + Math.random()]
+                }}
+                transition={{ 
+                  duration: 1 + Math.random(),
+                  repeat: Infinity,
+                  delay: Math.random() * 2,
+                  ease: "easeOut"
+                }}
+              />
+            ))}
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const HeroSection = () => {
   const controls = useAnimation();
   const [ref, inView] = useInView({
@@ -113,6 +357,80 @@ const HeroSection = () => {
       {/* Particles background */}
       <div ref={particleContainerRef} className="absolute inset-0 z-0" />
       
+      {/* Decorative elements */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <motion.div 
+          className="absolute -top-20 -right-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl"
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3]
+          }}
+          transition={{ 
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        <motion.div 
+          className="absolute bottom-40 -left-20 w-60 h-60 bg-primary/15 rounded-full blur-3xl"
+          animate={{ 
+            scale: [1, 1.3, 1],
+            opacity: [0.2, 0.4, 0.2]
+          }}
+          transition={{ 
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
+        
+        {/* Floating shapes */}
+        <motion.div
+          className="absolute top-1/4 right-[15%] w-12 h-12 rounded-xl bg-primary/20 backdrop-blur-md"
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [0, 10, 0]
+          }}
+          transition={{ 
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        <motion.div
+          className="absolute bottom-1/4 left-[10%] w-16 h-16 rounded-full border-2 border-primary/30 backdrop-blur-md"
+          animate={{ 
+            y: [0, -30, 0],
+            x: [0, 10, 0],
+            rotate: [0, -20, 0]
+          }}
+          transition={{ 
+            duration: 7,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
+        
+        <motion.div
+          className="absolute top-1/3 left-[20%] w-8 h-8 rotate-45 bg-primary/10 backdrop-blur-md"
+          animate={{ 
+            y: [0, -15, 0],
+            x: [0, 15, 0],
+            rotate: [45, 90, 45]
+          }}
+          transition={{ 
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2
+          }}
+        />
+      </div>
+      
       <div className="container mx-auto px-4 z-10">
         <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16">
           <motion.div 
@@ -122,12 +440,49 @@ const HeroSection = () => {
             variants={staggerChildrenVariants}
             className="flex-1 space-y-6"
           >
-            <motion.h1 
-              variants={fadeInUpVariants} 
-              className="text-4xl md:text-6xl font-bold text-foreground"
-            >
-              Connecting <span className="text-primary">Startups</span> & <span className="text-primary">Investors</span> Securely
-            </motion.h1>
+            <motion.div className="relative">
+              <motion.h1 
+                variants={fadeInUpVariants} 
+                className="text-4xl md:text-6xl font-bold text-foreground relative z-10"
+              >
+                Connecting <span className="text-primary relative">
+                  Startups
+                  <motion.span 
+                    className="absolute -bottom-2 left-0 h-2 bg-primary/20 w-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ delay: 1, duration: 0.8, ease: "easeOut" }}
+                  />
+                </span> & <span className="text-primary relative">
+                  Investors
+                  <motion.span 
+                    className="absolute -bottom-2 left-0 h-2 bg-primary/20 w-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ delay: 1.3, duration: 0.8, ease: "easeOut" }}
+                  />
+                </span> Securely
+              </motion.h1>
+              
+              {/* Decorative dots pattern */}
+              <motion.div 
+                className="absolute -top-10 -left-10 w-40 h-40 opacity-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                transition={{ delay: 1, duration: 1 }}
+              >
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <div 
+                    key={i}
+                    className="absolute w-1.5 h-1.5 rounded-full bg-primary/40"
+                    style={{ 
+                      top: `${(i % 5) * 25}%`, 
+                      left: `${Math.floor(i / 5) * 25}%`
+                    }}
+                  />
+                ))}
+              </motion.div>
+            </motion.div>
             
             <motion.p 
               variants={fadeInUpVariants}
@@ -145,8 +500,13 @@ const HeroSection = () => {
                 whileHover="pulse"
                 variants={pulseVariants}
               >
-                <Button size="lg" className="bg-primary font-medium text-primary-foreground w-full sm:w-auto">
-                  Join as a Startup <FiArrowRight className="ml-2" />
+                <Button size="lg" className="bg-gradient-to-r from-primary to-primary/80 font-medium text-primary-foreground w-full sm:w-auto group">
+                  <span>Join as a Startup</span>
+                  <motion.div
+                    className="ml-2 group-hover:translate-x-1 transition-transform"
+                  >
+                    <FiArrowRight />
+                  </motion.div>
                 </Button>
               </motion.div>
               
@@ -155,10 +515,53 @@ const HeroSection = () => {
                 whileHover="pulse"
                 variants={pulseVariants}
               >
-                <Button size="lg" variant="outline" className="font-medium w-full sm:w-auto">
-                  Join as an Investor <FiArrowRight className="ml-2" />
+                <Button size="lg" variant="outline" className="font-medium w-full sm:w-auto group border-primary/50 hover:border-primary">
+                  <span>Join as an Investor</span> 
+                  <motion.div
+                    className="ml-2 group-hover:translate-x-1 transition-transform"
+                  >
+                    <FiArrowRight />
+                  </motion.div>
                 </Button>
               </motion.div>
+            </motion.div>
+            
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.5, duration: 0.8 }}
+              className="flex flex-wrap gap-6 pt-6"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <FiBriefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">500+</div>
+                  <div className="text-xs text-muted-foreground">Startups</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <FiUsers className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">200+</div>
+                  <div className="text-xs text-muted-foreground">Investors</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <FiShield className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold">100%</div>
+                  <div className="text-xs text-muted-foreground">Secure</div>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
           
@@ -166,9 +569,39 @@ const HeroSection = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-            className="flex-1 max-w-md"
+            className="flex-1 max-w-md relative"
           >
-            <LottieAnimation animationData={handshakeAnimation} />
+            {/* Decorative floating circles */}
+            <motion.div
+              className="absolute -top-8 -right-8 w-16 h-16 rounded-full bg-primary/10 z-0"
+              animate={{ 
+                y: [0, -10, 0],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            
+            <motion.div
+              className="absolute -bottom-4 -left-4 w-12 h-12 rounded-full bg-primary/15 z-0"
+              animate={{ 
+                y: [0, 10, 0],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                duration: 5,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 1
+              }}
+            />
+            
+            <div className="relative z-10">
+              <LottieAnimation animationData={handshakeAnimation} />
+            </div>
           </motion.div>
         </div>
       </div>
@@ -184,7 +617,7 @@ const HeroSection = () => {
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-8 h-12 rounded-full border-2 border-primary flex justify-center items-start p-1">
+          <div className="w-8 h-12 rounded-full border-2 border-primary flex justify-center items-start p-1 backdrop-blur-sm">
             <motion.div 
               className="w-1.5 h-3 bg-primary rounded-full"
               animate={{ y: [0, 15, 0] }}
@@ -1359,6 +1792,7 @@ export default function LandingPageAnimated() {
 
       <main>
         <HeroSection />
+        <RocketLaunchSection />
         <HowItWorksSection />
         <KeyFeaturesSection />
         <FundingAnimationSection />
