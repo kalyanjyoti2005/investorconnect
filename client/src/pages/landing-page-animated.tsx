@@ -18,6 +18,7 @@ import communityAnimation from "@/assets/animations/community.json";
 // Import new components
 import RocketAnimation from "@/components/landing/rocket-animation";
 import HackathonSection from "@/components/landing/hackathon-section";
+import DeviceAnimation from "@/components/landing/3d-device-animation";
 import { ParallaxContainer, ParallaxItem, FloatingElement } from "@/components/landing/parallax-effect";
 
 // Register GSAP plugins
@@ -1300,51 +1301,8 @@ const LivePreviewSection = () => {
 };
 
 const ComingSoonAppSection = () => {
-  const phoneRef = useRef<HTMLDivElement>(null);
-  const screensRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    if (!phoneRef.current || !screensRef.current) return;
-
-    // Timeline for phone animation
-    const phoneTimeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: phoneRef.current,
-        start: "top 70%",
-        end: "bottom 20%",
-        toggleActions: "play none none reverse",
-      }
-    });
-
-    phoneTimeline
-      .from(phoneRef.current, {
-        y: 100,
-        opacity: 0,
-        duration: 0.8,
-        ease: "power2.out"
-      })
-      .from(".phone-screen", {
-        opacity: 0,
-        scale: 0.9,
-        duration: 0.5,
-        stagger: 0.2,
-        ease: "power1.out"
-      }, "-=0.4");
-
-    // Screens sliding animation
-    gsap.fromTo(screensRef.current,
-      { x: -20 },
-      { 
-        x: -220, 
-        scrollTrigger: {
-          trigger: screensRef.current,
-          start: "top 60%",
-          end: "bottom 20%",
-          scrub: true,
-        }
-      }
-    );
-
+    // Component is now using DeviceAnimation component
     return () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
@@ -1448,128 +1406,9 @@ const ComingSoonAppSection = () => {
             </div>
           </div>
 
-          {/* Phone Mockup */}
-          <div className="w-full md:w-1/2 order-1 md:order-2 relative" style={{ height: "500px" }}>
-            <div ref={phoneRef} className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] h-[560px] bg-black rounded-[36px] border-[8px] border-gray-800 shadow-2xl overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-6 bg-black z-10 flex items-center justify-center">
-                <div className="w-20 h-4 bg-black rounded-b-xl"></div>
-              </div>
-              
-              <div className="h-full w-full overflow-hidden bg-gradient-to-b from-primary/90 to-primary/50">
-                {/* Scrolling App Screens */}
-                <div ref={screensRef} className="flex gap-4 mt-8 pl-4" style={{ width: "800px" }}>
-                  {/* Dashboard Screen */}
-                  <div className="phone-screen w-[250px] h-[500px] bg-background rounded-lg shadow-lg p-3 flex flex-col">
-                    <div className="h-6 flex items-center mb-2">
-                      <div className="w-24 h-3 bg-primary/20 rounded-full"></div>
-                      <div className="ml-auto flex space-x-1">
-                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
-                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
-                      </div>
-                    </div>
-                    <div className="text-xs font-bold text-primary mb-2">Dashboard</div>
-                    <div className="w-full h-24 bg-primary/10 rounded mb-3 flex items-center justify-center">
-                      <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
-                        <span className="text-2xl">📈</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="h-16 bg-primary/5 rounded p-2">
-                        <div className="w-12 h-2 bg-primary/20 rounded mb-1"></div>
-                        <div className="w-8 h-4 bg-primary/30 rounded"></div>
-                      </div>
-                      <div className="h-16 bg-primary/5 rounded p-2">
-                        <div className="w-12 h-2 bg-primary/20 rounded mb-1"></div>
-                        <div className="w-10 h-4 bg-primary/30 rounded"></div>
-                      </div>
-                    </div>
-                    <div className="flex-1 bg-primary/5 rounded p-2">
-                      <div className="w-full h-3 bg-primary/20 rounded mb-2"></div>
-                      <div className="w-full h-3 bg-primary/10 rounded mb-2"></div>
-                      <div className="w-3/4 h-3 bg-primary/10 rounded"></div>
-                    </div>
-                    <div className="h-12 bg-card mt-2 rounded flex items-center justify-around">
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/40 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                    </div>
-                  </div>
-                  
-                  {/* Startups Screen */}
-                  <div className="phone-screen w-[250px] h-[500px] bg-background rounded-lg shadow-lg p-3 flex flex-col">
-                    <div className="h-6 flex items-center mb-2">
-                      <div className="w-24 h-3 bg-primary/20 rounded-full"></div>
-                      <div className="ml-auto flex space-x-1">
-                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
-                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
-                      </div>
-                    </div>
-                    <div className="text-xs font-bold text-primary mb-2">Startups</div>
-                    <div className="flex-1 space-y-3">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="w-full h-24 bg-primary/5 rounded p-2 flex">
-                          <div className="w-12 h-12 bg-primary/20 rounded flex items-center justify-center">
-                            <span className="text-sm">💡</span>
-                          </div>
-                          <div className="ml-2 flex-1">
-                            <div className="w-24 h-2 bg-primary/30 rounded mb-1"></div>
-                            <div className="w-full h-2 bg-primary/10 rounded mb-1"></div>
-                            <div className="w-full h-2 bg-primary/10 rounded mb-1"></div>
-                            <div className="w-1/2 h-2 bg-primary/10 rounded"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="h-12 bg-card mt-2 rounded flex items-center justify-around">
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/40 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                    </div>
-                  </div>
-                  
-                  {/* Messaging Screen */}
-                  <div className="phone-screen w-[250px] h-[500px] bg-background rounded-lg shadow-lg p-3 flex flex-col">
-                    <div className="h-6 flex items-center mb-2">
-                      <div className="w-24 h-3 bg-primary/20 rounded-full"></div>
-                      <div className="ml-auto flex space-x-1">
-                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
-                        <div className="w-3 h-3 bg-primary/20 rounded-full"></div>
-                      </div>
-                    </div>
-                    <div className="text-xs font-bold text-primary mb-2">Messages</div>
-                    
-                    <div className="flex-1 flex flex-col">
-                      <div className="w-3/4 ml-auto h-10 bg-primary/40 rounded-xl rounded-tr-none mb-3 p-2">
-                        <div className="w-full h-full bg-primary/20 rounded"></div>
-                      </div>
-                      <div className="w-3/4 h-10 bg-primary/10 rounded-xl rounded-tl-none mb-3 p-2">
-                        <div className="w-full h-full bg-primary/5 rounded"></div>
-                      </div>
-                      <div className="w-3/4 h-10 bg-primary/10 rounded-xl rounded-tl-none mb-3 p-2">
-                        <div className="w-full h-full bg-primary/5 rounded"></div>
-                      </div>
-                      <div className="w-3/4 ml-auto h-10 bg-primary/40 rounded-xl rounded-tr-none p-2">
-                        <div className="w-full h-full bg-primary/20 rounded"></div>
-                      </div>
-                    </div>
-                    
-                    <div className="h-10 bg-primary/5 rounded-full mt-2 flex items-center px-3">
-                      <div className="w-full h-2 bg-primary/20 rounded-full"></div>
-                      <div className="w-6 h-6 bg-primary/30 rounded-full ml-2"></div>
-                    </div>
-                    
-                    <div className="h-12 bg-card mt-2 rounded flex items-center justify-around">
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/20 rounded"></div>
-                      <div className="w-6 h-6 bg-primary/40 rounded"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* 3D Phone Animation */}
+          <div className="w-full md:w-1/2 order-1 md:order-2 relative h-[600px]">
+            <DeviceAnimation />
           </div>
         </div>
       </div>
