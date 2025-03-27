@@ -11,6 +11,7 @@ import Messages from "@/pages/messages";
 import Events from "@/pages/events";
 import Voting from "@/pages/voting";
 import Settings from "@/pages/settings";
+import LandingPage from "@/pages/landing-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
@@ -18,7 +19,8 @@ import { ThemeProvider } from "./components/theme-provider";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={Dashboard} />
+      <Route path="/" component={LandingPage} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/explore" component={Explore} />
       <ProtectedRoute path="/investments" component={Investments} />
       <ProtectedRoute path="/messages" component={Messages} />
