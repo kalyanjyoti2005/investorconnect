@@ -278,7 +278,7 @@ const HowItWorksSection = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-24 bg-gradient-to-br from-background to-background/95">
+    <section id="how-it-works" ref={sectionRef} className="py-24 bg-gradient-to-br from-background to-background/95">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.h2 
@@ -405,7 +405,7 @@ const KeyFeaturesSection = () => {
   };
 
   return (
-    <section className="py-24 bg-gradient-to-br from-primary/5 to-background">
+    <section id="features" className="py-24 bg-gradient-to-br from-primary/5 to-background">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.h2 
@@ -462,60 +462,76 @@ const KeyFeaturesSection = () => {
   );
 };
 
-const TestimonialsSection = () => {
-  const testimonials = [
-    {
-      quote: "StartupMatch helped me secure my first $100K in funding within just two months of joining the platform.",
-      name: "Sarah Chen",
-      role: "Founder, TechNova",
-      image: ""
-    },
-    {
-      quote: "I discovered an incredible AI startup before their public launch. The platform's NDA system gave me exclusive early access.",
-      name: "Michael Rodriguez",
-      role: "Angel Investor",
-      image: ""
-    },
-    {
-      quote: "The milestone-based funding system gives me peace of mind as an investor. I can track real progress before releasing funds.",
-      name: "Jennifer Kim",
-      role: "VC Partner, FutureFund",
-      image: ""
-    },
-    {
-      quote: "StartupMatch's AI analysis helped us refine our pitch and connect with investors who truly understand our vision.",
-      name: "David Martinez",
-      role: "Co-founder, EcoSolutions",
-      image: ""
-    }
-  ];
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const testimonialsRef = useRef<HTMLDivElement>(null);
+const FundingAnimationSection = () => {
+  const animationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
+    if (!animationRef.current) return;
 
-    return () => clearInterval(interval);
-  }, [testimonials.length]);
+    // Create a GSAP timeline for the funding flow animation
+    const timeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: animationRef.current,
+        start: "top 60%",
+        end: "bottom 20%",
+        toggleActions: "play none none reverse",
+      }
+    });
 
-  // Pause auto-scrolling on hover
-  const pauseAutoScroll = () => {
-    if (testimonialsRef.current) {
-      testimonialsRef.current.style.animationPlayState = 'paused';
-    }
-  };
+    // Animate the elements sequentially
+    timeline
+      .from(".entrepreneur-icon", { 
+        x: -100, 
+        opacity: 0, 
+        duration: 0.7, 
+        ease: "power2.out" 
+      })
+      .from(".investor-icon", { 
+        x: 100, 
+        opacity: 0, 
+        duration: 0.7, 
+        ease: "power2.out" 
+      }, "<")
+      .from(".funding-platform", { 
+        y: 50, 
+        opacity: 0, 
+        scale: 0.8,
+        duration: 0.7, 
+        ease: "power2.out" 
+      }, "-=0.3")
+      .from(".funding-arrow-1", { 
+        width: 0, 
+        opacity: 0, 
+        duration: 0.5, 
+        ease: "power1.out" 
+      })
+      .from(".funding-arrow-2", { 
+        width: 0, 
+        opacity: 0, 
+        duration: 0.5, 
+        ease: "power1.out" 
+      }, "-=0.2")
+      .from(".milestone-node", { 
+        scale: 0, 
+        opacity: 0, 
+        stagger: 0.2,
+        duration: 0.5, 
+        ease: "back.out(1.7)" 
+      })
+      .from(".funding-completion", { 
+        y: 30, 
+        opacity: 0, 
+        duration: 0.7, 
+        ease: "power2.out" 
+      });
 
-  const resumeAutoScroll = () => {
-    if (testimonialsRef.current) {
-      testimonialsRef.current.style.animationPlayState = 'running';
-    }
-  };
+    return () => {
+      timeline.kill();
+    };
+  }, []);
 
   return (
-    <section className="py-24 bg-gradient-to-b from-background to-primary/5">
+    <section id="funding" className="py-24 bg-gradient-to-br from-primary/5 via-background to-background/95">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.h2 
@@ -525,7 +541,7 @@ const TestimonialsSection = () => {
             viewport={{ once: true }}
             className="text-3xl md:text-4xl font-bold mb-4"
           >
-            Success Stories
+            Secure Milestone-Based Funding
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -534,71 +550,117 @@ const TestimonialsSection = () => {
             viewport={{ once: true }}
             className="text-lg text-muted-foreground"
           >
-            Hear from entrepreneurs and investors who have found success on our platform.
+            Our platform creates a secure bridge between startups and investors with transparent milestone-based funding releases.
           </motion.p>
         </div>
 
         <div 
-          className="relative max-w-4xl mx-auto overflow-hidden" 
-          ref={testimonialsRef}
-          onMouseEnter={pauseAutoScroll}
-          onMouseLeave={resumeAutoScroll}
+          ref={animationRef} 
+          className="relative h-[400px] md:h-[500px] max-w-5xl mx-auto overflow-hidden"
         >
-          <div className="flex justify-center">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentIndex}
-                initial={{ opacity: 0, x: 100 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ duration: 0.5 }}
-                className="bg-card border border-border rounded-xl p-8 shadow-lg"
-              >
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="w-24 h-24 md:w-32 md:h-32 relative flex items-center justify-center">
-                    <div className="absolute inset-0 rounded-full bg-primary/30 animate-pulse" />
-                    {testimonials[currentIndex].image ? (
-                      <img 
-                        src={testimonials[currentIndex].image} 
-                        alt={testimonials[currentIndex].name}
-                        className="w-full h-full object-cover rounded-full border-4 border-primary" 
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-full border-4 border-primary bg-primary/10 flex items-center justify-center">
-                        <span className="text-3xl md:text-4xl text-primary">
-                          {testimonials[currentIndex].name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="text-4xl text-primary/30 mb-2">"</div>
-                    <p className="text-lg mb-4 italic">
-                      {testimonials[currentIndex].quote}
-                    </p>
-                    <div>
-                      <h4 className="font-semibold">{testimonials[currentIndex].name}</h4>
-                      <p className="text-sm text-muted-foreground">{testimonials[currentIndex].role}</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
+          {/* Startup/Entrepreneur Side */}
+          <motion.div 
+            className="entrepreneur-icon absolute top-1/3 left-5 md:left-20 bg-primary/10 border border-primary/30 rounded-2xl p-5 shadow-lg w-32 h-32 flex flex-col items-center justify-center"
+            initial={{ x: -100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            viewport={{ once: true }}
+          >
+            <LottieAnimation 
+              animationData={handshakeAnimation}
+              width={70}
+              height={70}
+            />
+            <p className="text-sm font-medium mt-2">Entrepreneur</p>
+          </motion.div>
+
+          {/* Platform Center */}
+          <motion.div 
+            className="funding-platform absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card border border-border rounded-full w-48 h-48 flex items-center justify-center shadow-xl z-10"
+            initial={{ y: 50, opacity: 0, scale: 0.8 }}
+            whileInView={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <div className="flex flex-col items-center">
+              <LottieAnimation 
+                animationData={escrowAnimation}
+                width={80}
+                height={80}
+              />
+              <h3 className="font-bold text-lg mt-1">StartupMatch</h3>
+              <p className="text-xs text-muted-foreground">Secure Escrow</p>
+            </div>
+          </motion.div>
+
+          {/* Investor Side */}
+          <motion.div 
+            className="investor-icon absolute top-1/3 right-5 md:right-20 bg-blue-50 border border-blue-200 rounded-2xl p-5 shadow-lg w-32 h-32 flex flex-col items-center justify-center"
+            initial={{ x: 100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            viewport={{ once: true }}
+          >
+            <LottieAnimation 
+              animationData={blockchainAnimation}
+              width={70}
+              height={70}
+            />
+            <p className="text-sm font-medium mt-2">Investor</p>
+          </motion.div>
+
+          {/* Connecting Arrows */}
+          <div className="funding-arrow-1 absolute top-1/3 transform translate-y-10 left-[120px] md:left-[180px] h-2 bg-primary/50 w-[calc(50%-150px)] rounded-full"></div>
+          <div className="funding-arrow-2 absolute top-1/3 transform translate-y-10 right-[120px] md:right-[180px] h-2 bg-blue-400/50 w-[calc(50%-150px)] rounded-full"></div>
+
+          {/* Milestone Nodes */}
+          <div className="milestone-node absolute bottom-1/4 left-1/4 w-20 h-20 bg-green-50 border border-green-200 rounded-full flex items-center justify-center shadow-md">
+            <div className="flex flex-col items-center">
+              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs font-medium mt-1">MVP</p>
+            </div>
           </div>
 
-          <div className="flex justify-center mt-8 gap-2">
-            {testimonials.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentIndex(i)}
-                className={`w-3 h-3 rounded-full transition-all ${
-                  i === currentIndex ? 'bg-primary w-6' : 'bg-primary/30'
-                }`}
-                aria-label={`View testimonial ${i + 1}`}
-              />
-            ))}
+          <div className="milestone-node absolute bottom-1/4 left-1/2 transform -translate-x-1/2 w-20 h-20 bg-yellow-50 border border-yellow-200 rounded-full flex items-center justify-center shadow-md">
+            <div className="flex flex-col items-center">
+              <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <p className="text-xs font-medium mt-1">Launch</p>
+            </div>
           </div>
+
+          <div className="milestone-node absolute bottom-1/4 right-1/4 w-20 h-20 bg-purple-50 border border-purple-200 rounded-full flex items-center justify-center shadow-md">
+            <div className="flex flex-col items-center">
+              <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <p className="text-xs font-medium mt-1">Growth</p>
+            </div>
+          </div>
+
+          {/* Funding Completion */}
+          <motion.div 
+            className="funding-completion absolute bottom-10 left-1/2 transform -translate-x-1/2 text-center"
+            initial={{ y: 30, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 1 }}
+            viewport={{ once: true }}
+          >
+            <div className="bg-card border border-border rounded-xl p-4 shadow-lg">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="font-semibold">Secure, Transparent, Reliable</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Funds are released only when predefined milestones are achieved and verified</p>
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -686,7 +748,7 @@ const LivePreviewSection = () => {
   };
 
   return (
-    <section className="py-24 bg-background">
+    <section id="live-activity" className="py-24 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.h2 
@@ -997,8 +1059,8 @@ export default function LandingPageAnimated() {
             <nav className="hidden md:flex space-x-4">
               <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
               <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
-              <a href="#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">Testimonials</a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+              <a href="#funding" className="text-muted-foreground hover:text-foreground transition-colors">Secure Funding</a>
+              <a href="#live-activity" className="text-muted-foreground hover:text-foreground transition-colors">Live Activity</a>
             </nav>
             
             <div className="flex items-center space-x-4">
@@ -1021,7 +1083,7 @@ export default function LandingPageAnimated() {
         <HeroSection />
         <HowItWorksSection />
         <KeyFeaturesSection />
-        <TestimonialsSection />
+        <FundingAnimationSection />
         <LivePreviewSection />
         <CallToActionSection />
       </main>
