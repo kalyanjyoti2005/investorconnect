@@ -1,63 +1,51 @@
-import React, { useRef, useEffect } from 'react';
-import lottie, { AnimationItem } from 'lottie-web';
-import { cn } from '@/lib/utils';
+import { useEffect, useRef } from "react";
+import lottie, { AnimationItem } from "lottie-web";
 
 interface LottieAnimationProps {
   animationData: any;
   loop?: boolean;
   autoplay?: boolean;
-  className?: string;
-  onComplete?: () => void;
-  speed?: number;
   style?: React.CSSProperties;
+  className?: string;
+  width?: number | string;
+  height?: number | string;
 }
 
 export default function LottieAnimation({
   animationData,
   loop = true,
   autoplay = true,
+  style,
   className,
-  onComplete,
-  speed = 1,
-  style
+  width = "100%",
+  height = "100%"
 }: LottieAnimationProps) {
-  const animationContainer = useRef<HTMLDivElement>(null);
-  const anim = useRef<AnimationItem | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<AnimationItem | null>(null);
 
   useEffect(() => {
-    if (!animationContainer.current) return;
+    if (!containerRef.current) return;
 
-    anim.current = lottie.loadAnimation({
-      container: animationContainer.current,
-      renderer: 'svg',
-      loop: loop,
-      autoplay: autoplay,
-      animationData: animationData,
+    animationRef.current = lottie.loadAnimation({
+      container: containerRef.current,
+      renderer: "svg",
+      loop,
+      autoplay,
+      animationData
     });
 
-    if (speed !== 1 && anim.current) {
-      anim.current.setSpeed(speed);
-    }
-
-    const animationItem = anim.current;
-
-    if (onComplete && !loop) {
-      animationItem.addEventListener('complete', onComplete);
-    }
-
     return () => {
-      if (onComplete && !loop && animationItem) {
-        animationItem.removeEventListener('complete', onComplete);
+      if (animationRef.current) {
+        animationRef.current.destroy();
       }
-      animationItem?.destroy();
     };
-  }, [animationData, loop, autoplay, onComplete, speed]);
+  }, [animationData, loop, autoplay]);
 
   return (
-    <div 
-      ref={animationContainer}
-      className={cn('w-full h-full', className)}
-      style={style}
+    <div
+      ref={containerRef}
+      style={{ width, height, ...style }}
+      className={className}
     />
   );
 }

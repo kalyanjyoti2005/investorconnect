@@ -11,7 +11,7 @@ import Messages from "@/pages/messages";
 import Events from "@/pages/events";
 import Voting from "@/pages/voting";
 import Settings from "@/pages/settings";
-import LandingPage from "@/pages/landing-page";
+import LandingPageAnimated from "@/pages/landing-page-animated";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
@@ -20,7 +20,7 @@ import { OnboardingProvider } from "./context/onboarding-context";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={LandingPage} />
+      <Route path="/" component={LandingPageAnimated} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/explore" component={Explore} />
       <ProtectedRoute path="/investments" component={Investments} />
