@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useOnboarding } from "@/context/onboarding-context";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,17 +13,29 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Bell, Globe, Lock, Moon, Shield, Sun, User, Users } from "lucide-react";
+import { AlertCircle, Bell, Globe, HelpCircle, Lock, Moon, Shield, Sun, User, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const { user } = useAuth();
+  const { resetOnboarding } = useOnboarding();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [theme, setTheme] = useState("light");
 
   // Toggle theme (would connect to actual theme provider in production)
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
+  };
+  
+  // Reset the onboarding wizard
+  const handleResetOnboarding = () => {
+    resetOnboarding();
+    toast({
+      title: "Onboarding Reset",
+      description: "The startup journey tour will show the next time you log in.",
+    });
   };
 
   return (
@@ -37,7 +50,7 @@ export default function Settings() {
             <h1 className="text-3xl font-bold mb-6">Settings</h1>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <TabsList className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 <TabsTrigger value="profile" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   <span className="hidden md:inline">Profile</span>
@@ -53,6 +66,10 @@ export default function Settings() {
                 <TabsTrigger value="privacy" className="flex items-center gap-2">
                   <Lock className="h-4 w-4" />
                   <span className="hidden md:inline">Privacy</span>
+                </TabsTrigger>
+                <TabsTrigger value="help" className="flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="hidden md:inline">Help</span>
                 </TabsTrigger>
                 {user?.role === "founder" && (
                   <TabsTrigger value="startup" className="flex items-center gap-2">
@@ -439,6 +456,113 @@ export default function Settings() {
                           </p>
                         </div>
                         <Switch />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Help & Support Tab */}
+              <TabsContent value="help" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Help & Support</CardTitle>
+                    <CardDescription>
+                      Find help resources and support options.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-medium">Documentation & Tutorials</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Learn how to use StartupMatch platform with our resources.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Button variant="outline" className="justify-start">
+                            <HelpCircle className="mr-2 h-4 w-4" />
+                            Getting Started Guide
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            <Users className="mr-2 h-4 w-4" />
+                            Connecting with Investors
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            <Shield className="mr-2 h-4 w-4" />
+                            Security Best Practices
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            <Globe className="mr-2 h-4 w-4" />
+                            Video Tutorials
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <h3 className="text-lg font-medium">Onboarding Tour</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Review the platform tour to learn more about StartupMatch features.
+                        </p>
+                        <Button onClick={handleResetOnboarding}>
+                          Restart Onboarding Tour
+                        </Button>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <h3 className="text-lg font-medium">Contact Support</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Need help with something specific? Our team is ready to assist you.
+                        </p>
+                        <div className="space-y-2">
+                          <Button className="w-full md:w-auto">Contact Support Team</Button>
+                          <p className="text-xs text-muted-foreground">
+                            Support hours: Monday-Friday, 9am-6pm EST
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Frequently Asked Questions</CardTitle>
+                    <CardDescription>
+                      Find answers to common questions about using StartupMatch.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-4">
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-2">How does the matching algorithm work?</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Our AI-powered algorithm analyzes various factors including industry, growth stage, funding needs, and investment criteria to create optimal founder-investor matches.
+                        </p>
+                      </div>
+                      
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-2">How is my data protected?</h4>
+                        <p className="text-sm text-muted-foreground">
+                          StartupMatch uses industry-standard encryption and security practices. NDA-protected data is only shared with approved investors who have signed the required agreements.
+                        </p>
+                      </div>
+                      
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-2">What are milestone-based releases?</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Milestone-based releases allow investors to fund startups incrementally, with funds held in escrow and released when predefined milestones are verified as complete.
+                        </p>
+                      </div>
+                      
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-medium mb-2">How do I verify my investor profile?</h4>
+                        <p className="text-sm text-muted-foreground">
+                          To verify your investor profile, complete the KYC process in the Security tab by submitting the required identification documents. Verification typically takes 1-2 business days.
+                        </p>
                       </div>
                     </div>
                   </CardContent>

@@ -15,6 +15,7 @@ import LandingPage from "@/pages/landing-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
+import { OnboardingProvider } from "./context/onboarding-context";
 
 function Router() {
   return (
@@ -38,8 +39,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="startupmatch-theme">
         <AuthProvider>
-          <Router />
-          <Toaster />
+          <OnboardingProvider>
+            <Router />
+            <Toaster />
+          </OnboardingProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

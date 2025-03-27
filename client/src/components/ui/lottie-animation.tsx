@@ -1,67 +1,63 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import lottie, { AnimationItem } from 'lottie-web';
+import { cn } from '@/lib/utils';
 
 interface LottieAnimationProps {
   animationData: any;
   loop?: boolean;
   autoplay?: boolean;
   className?: string;
-  height?: number | string;
-  width?: number | string;
   onComplete?: () => void;
+  speed?: number;
+  style?: React.CSSProperties;
 }
 
-export const LottieAnimation = ({
+export default function LottieAnimation({
   animationData,
   loop = true,
   autoplay = true,
-  className = '',
-  height = 300,
-  width = 300,
+  className,
   onComplete,
-}: LottieAnimationProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<AnimationItem | null>(null);
+  speed = 1,
+  style
+}: LottieAnimationProps) {
+  const animationContainer = useRef<HTMLDivElement>(null);
+  const anim = useRef<AnimationItem | null>(null);
 
   useEffect(() => {
-    if (containerRef.current) {
-      if (animationRef.current) {
-        animationRef.current.destroy();
-      }
+    if (!animationContainer.current) return;
 
-      animationRef.current = lottie.loadAnimation({
-        container: containerRef.current,
-        renderer: 'svg',
-        loop,
-        autoplay,
-        animationData,
-      });
+    anim.current = lottie.loadAnimation({
+      container: animationContainer.current,
+      renderer: 'svg',
+      loop: loop,
+      autoplay: autoplay,
+      animationData: animationData,
+    });
 
-      if (onComplete) {
-        animationRef.current.addEventListener('complete', onComplete);
-      }
+    if (speed !== 1 && anim.current) {
+      anim.current.setSpeed(speed);
+    }
+
+    const animationItem = anim.current;
+
+    if (onComplete && !loop) {
+      animationItem.addEventListener('complete', onComplete);
     }
 
     return () => {
-      if (animationRef.current) {
-        animationRef.current.destroy();
-        if (onComplete && animationRef.current) {
-          animationRef.current.removeEventListener('complete', onComplete);
-        }
+      if (onComplete && !loop && animationItem) {
+        animationItem.removeEventListener('complete', onComplete);
       }
+      animationItem?.destroy();
     };
-  }, [animationData, loop, autoplay, onComplete]);
+  }, [animationData, loop, autoplay, onComplete, speed]);
 
   return (
     <div 
-      ref={containerRef} 
-      className={className}
-      style={{ 
-        width: typeof width === 'number' ? `${width}px` : width,
-        height: typeof height === 'number' ? `${height}px` : height,
-      }}
+      ref={animationContainer}
+      className={cn('w-full h-full', className)}
+      style={style}
     />
   );
-};
-
-export default LottieAnimation;
+}
