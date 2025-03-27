@@ -468,25 +468,25 @@ const TestimonialsSection = () => {
       quote: "StartupMatch helped me secure my first $100K in funding within just two months of joining the platform.",
       name: "Sarah Chen",
       role: "Founder, TechNova",
-      image: "https://randomuser.me/api/portraits/women/32.jpg" 
+      image: ""
     },
     {
       quote: "I discovered an incredible AI startup before their public launch. The platform's NDA system gave me exclusive early access.",
       name: "Michael Rodriguez",
       role: "Angel Investor",
-      image: "https://randomuser.me/api/portraits/men/47.jpg"
+      image: ""
     },
     {
       quote: "The milestone-based funding system gives me peace of mind as an investor. I can track real progress before releasing funds.",
       name: "Jennifer Kim",
       role: "VC Partner, FutureFund",
-      image: "https://randomuser.me/api/portraits/women/45.jpg"
+      image: ""
     },
     {
       quote: "StartupMatch's AI analysis helped us refine our pitch and connect with investors who truly understand our vision.",
       name: "David Martinez",
       role: "Co-founder, EcoSolutions",
-      image: "https://randomuser.me/api/portraits/men/23.jpg"
+      image: ""
     }
   ];
 
@@ -555,13 +555,21 @@ const TestimonialsSection = () => {
                 className="bg-card border border-border rounded-xl p-8 shadow-lg"
               >
                 <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="w-24 h-24 md:w-32 md:h-32 relative">
+                  <div className="w-24 h-24 md:w-32 md:h-32 relative flex items-center justify-center">
                     <div className="absolute inset-0 rounded-full bg-primary/30 animate-pulse" />
-                    <img 
-                      src={testimonials[currentIndex].image} 
-                      alt={testimonials[currentIndex].name}
-                      className="w-full h-full object-cover rounded-full border-4 border-primary" 
-                    />
+                    {testimonials[currentIndex].image ? (
+                      <img 
+                        src={testimonials[currentIndex].image} 
+                        alt={testimonials[currentIndex].name}
+                        className="w-full h-full object-cover rounded-full border-4 border-primary" 
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full border-4 border-primary bg-primary/10 flex items-center justify-center">
+                        <span className="text-3xl md:text-4xl text-primary">
+                          {testimonials[currentIndex].name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1">
