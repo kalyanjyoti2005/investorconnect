@@ -10,6 +10,7 @@ import Investments from "@/pages/investments";
 import Messages from "@/pages/messages";
 import Events from "@/pages/events";
 import Voting from "@/pages/voting";
+import Settings from "@/pages/settings";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
@@ -23,6 +24,7 @@ function Router() {
       <ProtectedRoute path="/messages" component={Messages} />
       <ProtectedRoute path="/events" component={Events} />
       <ProtectedRoute path="/voting" component={Voting} />
+      <ProtectedRoute path="/settings" component={Settings} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
