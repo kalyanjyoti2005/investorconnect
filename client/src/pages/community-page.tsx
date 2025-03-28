@@ -617,29 +617,36 @@ const DiscussionCard = ({ discussion, currentUser }: DiscussionCardProps) => {
   );
 };
 
-const HackathonTab = ({ user }) => {
-  const [selectedTeam, setSelectedTeam] = useState(null);
+interface HackathonTabProps {
+  user: TabProps['user'];
+}
+
+interface HackathonTeam {
+  id: number;
+  name: string;
+  description: string;
+  logoUrl: string | null;
+  createdAt: string;
+  memberCount?: number;
+  isLeader?: boolean;
+  unreadMessages?: number;
+}
+
+const HackathonTab = ({ user }: HackathonTabProps) => {
+  const [selectedTeam, setSelectedTeam] = useState<HackathonTeam | null>(null);
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
   
-  // Placeholder data
-  const teams = [
-    {
-      id: 1,
-      name: "BlockChain Innovators",
-      description: "Building decentralized solutions for supply chain transparency",
-      members: 5,
-      isLeader: true,
-      unreadMessages: 3
-    },
-    {
-      id: 2,
-      name: "AI Visionaries",
-      description: "Creating AI-driven personal finance assistants",
-      members: 4,
-      isLeader: false,
-      unreadMessages: 0
+  // Get teams from API
+  const { data: teams = [], isLoading: isLoadingTeams } = useQuery<HackathonTeam[]>({
+    queryKey: ['/api/hackathon/teams'],
+    queryFn: async () => {
+      const response = await fetch('/api/hackathon/teams');
+      if (!response.ok) {
+        throw new Error('Failed to fetch teams');
+      }
+      return response.json();
     }
-  ];
+  });
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -660,7 +667,7 @@ const HackathonTab = ({ user }) => {
               >
                 <div>
                   <div className="font-medium">{team.name}</div>
-                  <div className="text-xs text-muted-foreground">{team.members} members</div>
+                  <div className="text-xs text-muted-foreground">{team.memberCount || 0} members</div>
                 </div>
                 <div className="flex gap-2">
                   {team.isLeader && (
@@ -678,7 +685,7 @@ const HackathonTab = ({ user }) => {
                     </TooltipProvider>
                   )}
                   
-                  {team.unreadMessages > 0 && (
+                  {(team.unreadMessages && team.unreadMessages > 0) && (
                     <Badge>{team.unreadMessages}</Badge>
                   )}
                 </div>
@@ -791,41 +798,38 @@ const HackathonTab = ({ user }) => {
   );
 };
 
-const HackathonChatPanel = ({ team, user }) => {
+interface HackathonChatPanelProps {
+  team: HackathonTeam;
+  user: TabProps['user'];
+}
+
+interface HackathonMessage {
+  id: number;
+  teamId: number;
+  senderId: number;
+  content: string;
+  createdAt: string;
+  sender?: {
+    name: string;
+    username: string;
+  };
+}
+
+const HackathonChatPanel = ({ team, user }: HackathonChatPanelProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   
-  // Placeholder data
-  const messages = [
-    {
-      id: 1,
-      senderId: 2,
-      sender: { name: "Alex Johnson", username: "alexj" },
-      content: "Hey team! I've started working on the backend architecture. Any suggestions?",
-      createdAt: new Date(Date.now() - 3600000 * 5)
-    },
-    {
-      id: 2,
-      senderId: 3,
-      sender: { name: "Sarah Chen", username: "sarahc" },
-      content: "I think we should go with a microservices approach. It'll be more scalable for our use case.",
-      createdAt: new Date(Date.now() - 3600000 * 4)
-    },
-    {
-      id: 3,
-      senderId: user.id,
-      sender: { name: user.name, username: user.username },
-      content: "Agreed. I'm focusing on the frontend with React. Should we use Redux for state management?",
-      createdAt: new Date(Date.now() - 3600000 * 3)
-    },
-    {
-      id: 4,
-      senderId: 2,
-      sender: { name: "Alex Johnson", username: "alexj" },
-      content: "I think Context API might be sufficient for our needs. Let's not overcomplicate things for the hackathon.",
-      createdAt: new Date(Date.now() - 3600000 * 2)
+  // Fetch chat messages from API
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery<HackathonMessage[]>({
+    queryKey: [`/api/hackathon/teams/${team.id}/chat`],
+    queryFn: async () => {
+      const response = await fetch(`/api/hackathon/teams/${team.id}/chat`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch chat messages');
+      }
+      return response.json();
     }
-  ];
+  });
   
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
@@ -833,26 +837,28 @@ const HackathonChatPanel = ({ team, user }) => {
     setNewMessage("");
   };
   
-  const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date: Date | string): string => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  const formatMessageDate = (date) => {
+  const formatMessageDate = (date: Date | string): string => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    if (date.toDateString() === today.toDateString()) {
+    if (dateObj.toDateString() === today.toDateString()) {
       return "Today";
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    } else if (dateObj.toDateString() === yesterday.toDateString()) {
       return "Yesterday";
     } else {
-      return date.toLocaleDateString();
+      return dateObj.toLocaleDateString();
     }
   };
   
   // Group messages by date
-  const messagesByDate = messages.reduce((groups, message) => {
+  const messagesByDate: Record<string, HackathonMessage[]> = messages.reduce((groups: Record<string, HackathonMessage[]>, message) => {
     const dateStr = formatMessageDate(message.createdAt);
     if (!groups[dateStr]) {
       groups[dateStr] = [];
@@ -891,16 +897,16 @@ const HackathonChatPanel = ({ team, user }) => {
               <div className="flex-grow border-t"></div>
             </div>
             
-            {dateMessages.map(message => (
+            {dateMessages.map((message: HackathonMessage) => (
               <div key={message.id} className={`flex mb-4 ${message.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
-                {message.senderId !== user.id && (
+                {message.senderId !== user.id && message.sender && (
                   <Avatar className="h-8 w-8 mr-2 mt-1">
                     <AvatarFallback>{message.sender.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                 )}
                 
                 <div className={`max-w-[80%] ${message.senderId === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'} p-3 rounded-lg`}>
-                  {message.senderId !== user.id && (
+                  {message.senderId !== user.id && message.sender && (
                     <div className="text-xs font-medium mb-1">{message.sender.name}</div>
                   )}
                   
@@ -985,22 +991,32 @@ const HackathonChatPanel = ({ team, user }) => {
   );
 };
 
-const LeaderboardTab = ({ user }) => {
+interface LeaderboardTabProps {
+  user: TabProps['user'];
+}
+
+interface Contributor {
+  id: number;
+  name: string;
+  username: string;
+  contributions: number;
+  badges: string[];
+}
+
+const LeaderboardTab = ({ user }: LeaderboardTabProps) => {
   const [leaderboardType, setLeaderboardType] = useState("contributors");
   
-  // Placeholder data
-  const contributors = [
-    { id: 1, name: "Emma Wilson", username: "emmaw", contributions: 42, badges: ["Top Contributor", "Innovator"] },
-    { id: 2, name: "Liam Johnson", username: "liamj", contributions: 38, badges: ["Growth Hacker"] },
-    { id: 3, name: "Olivia Smith", username: "olivias", contributions: 35, badges: ["Mentor"] },
-    { id: 4, name: "Noah Brown", username: "noahb", contributions: 29, badges: ["Top Contributor"] },
-    { id: 5, name: "Ava Davis", username: "avad", contributions: 26, badges: [] },
-    { id: 6, name: "William Miller", username: "williamm", contributions: 24, badges: ["Innovator"] },
-    { id: 7, name: "Sophia Wilson", username: "sophiaw", contributions: 22, badges: [] },
-    { id: 8, name: "James Moore", username: "jamesm", contributions: 18, badges: [] },
-    { id: 9, name: "Isabella Taylor", username: "isabellat", contributions: 15, badges: [] },
-    { id: 10, name: "Logan Anderson", username: "logana", contributions: 12, badges: [] },
-  ];
+  // Fetch contributors from API
+  const { data: contributors = [], isLoading: isLoadingContributors } = useQuery<Contributor[]>({
+    queryKey: ['/api/leaderboard/contributors'],
+    queryFn: async () => {
+      const response = await fetch('/api/leaderboard/contributors');
+      if (!response.ok) {
+        throw new Error('Failed to fetch contributors');
+      }
+      return response.json();
+    }
+  });
   
   const hackathonWinners = [
     { id: 1, name: "Team Nova", prize: "First Place", project: "AI-Powered Supply Chain Optimization" },
@@ -1203,10 +1219,25 @@ const LeaderboardTab = ({ user }) => {
   );
 };
 
-const EventsTab = ({ user }) => {
+interface EventsTabProps {
+  user: TabProps['user'];
+}
+
+interface Event {
+  id: number;
+  title: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  location: string;
+  attendees: number;
+  isRsvp: boolean;
+}
+
+const EventsTab = ({ user }: EventsTabProps) => {
   const [upcomingTab, setUpcomingTab] = useState("upcoming");
   
-  // Placeholder data
+  // Fetch events from API - for now using placeholder data
   const upcomingEvents = [
     {
       id: 1,
@@ -1263,8 +1294,8 @@ const EventsTab = ({ user }) => {
     }
   ];
   
-  const formatEventDate = (startTime, endTime) => {
-    const options = { 
+  const formatEventDate = (startTime: Date, endTime: Date): string => {
+    const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
       month: 'long', 
       day: 'numeric',
@@ -1279,7 +1310,7 @@ const EventsTab = ({ user }) => {
     return `${start} - ${end}`;
   };
   
-  const daysUntil = (date) => {
+  const daysUntil = (date: Date): number => {
     const now = new Date();
     const diffTime = date.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -1407,10 +1438,23 @@ const EventsTab = ({ user }) => {
   );
 };
 
-const NotificationsTab = ({ user }) => {
+interface NotificationsTabProps {
+  user: TabProps['user'];
+}
+
+interface Notification {
+  id: number;
+  type: "discussion" | "badge" | "event" | "message" | "investment" | "milestone";
+  content: string;
+  relatedId: number;
+  createdAt: Date;
+  read: boolean;
+}
+
+const NotificationsTab = ({ user }: NotificationsTabProps) => {
   const [filter, setFilter] = useState("all");
   
-  // Placeholder data
+  // Fetch notifications from API - for now using placeholder data
   const notifications = [
     {
       id: 1,
@@ -1454,7 +1498,7 @@ const NotificationsTab = ({ user }) => {
     }
   ];
   
-  const formatNotificationTime = (date) => {
+  const formatNotificationTime = (date: Date): string => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     
@@ -1468,7 +1512,7 @@ const NotificationsTab = ({ user }) => {
     return `${minutes}m ago`;
   };
   
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = (type: Notification['type']): JSX.Element => {
     switch (type) {
       case "badge":
         return <Award className="h-5 w-5 text-yellow-500" />;
@@ -1478,6 +1522,10 @@ const NotificationsTab = ({ user }) => {
         return <Calendar className="h-5 w-5 text-green-500" />;
       case "message":
         return <SendHorizontal className="h-5 w-5 text-purple-500" />;
+      case "investment":
+        return <Coins className="h-5 w-5 text-emerald-500" />;
+      case "milestone":
+        return <Target className="h-5 w-5 text-indigo-500" />;
       default:
         return <Bell className="h-5 w-5" />;
     }
