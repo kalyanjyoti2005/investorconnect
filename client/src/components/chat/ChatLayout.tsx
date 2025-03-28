@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useAI, MessagePurpose } from "@/hooks/use-ai";
 import { useToast } from "@/hooks/use-toast";
+import { useChat, ChatMessage as WebSocketChatMessage, ChatRoom as WebSocketChatRoom } from "@/context/chat-context";
 import { AIMessageGeneratorButton } from "./AIMessageGenerator";
 import {
   Search,
@@ -98,41 +99,97 @@ const sampleMessages: Record<string, ChatMessage[]> = {};
 
 // Main Chat Layout Component
 export default function ChatLayout() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { 
+    chatRooms, 
+    activeRoom, 
+    setActiveRoom, 
+    messages, 
+    sendMessage: wsSendMessage, 
+    typingUsers,
+    sendTypingStatus,
+    isConnected,
+    connecting,
+    initiateCall
+  } = useChat();
+  
   const [activeTab, setActiveTab] = useState<string>("direct");
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [selectedChat, setSelectedChat] = useState<string | null>(activeRoom);
   const [message, setMessage] = useState<string>("");
   const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
+  // Convert WebSocket message format to local format
+  const convertMessage = (wsMessage: WebSocketChatMessage): ChatMessage => {
+    return {
+      id: wsMessage.id,
+      senderId: wsMessage.senderId,
+      text: wsMessage.text,
+      timestamp: new Date(wsMessage.timestamp),
+      isRead: wsMessage.isRead
+    };
+  };
+  
+  // Effect to update selected chat when activeRoom changes
+  useEffect(() => {
+    if (activeRoom) {
+      setSelectedChat(activeRoom);
+    }
+  }, [activeRoom]);
+  
+  // Effect to update activeRoom when selectedChat changes
+  useEffect(() => {
+    if (selectedChat && selectedChat !== activeRoom) {
+      setActiveRoom(selectedChat);
+    }
+  }, [selectedChat, activeRoom, setActiveRoom]);
+  
+  // Convert chatRooms to local format
+  const convertedChatRooms: ChatRoom[] = chatRooms.map(wsRoom => ({
+    id: wsRoom.id,
+    name: wsRoom.name,
+    type: wsRoom.type,
+    icon: wsRoom.icon,
+    participants: wsRoom.participants,
+    lastMessage: wsRoom.lastMessage ? convertMessage(wsRoom.lastMessage) : undefined,
+    unreadCount: wsRoom.unreadCount
+  }));
+  
   // Filter chats by search query
-  const filteredChatRooms = sampleChatRooms.filter(chat => 
+  const filteredChatRooms = convertedChatRooms.filter(chat => 
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   // Effect to load messages when a chat is selected
   useEffect(() => {
-    if (selectedChat) {
-      setCurrentMessages(sampleMessages[selectedChat] || []);
+    if (selectedChat && messages[selectedChat]) {
+      // Convert messages to local format
+      const convertedMessages = messages[selectedChat].map(convertMessage);
+      setCurrentMessages(convertedMessages);
+    } else {
+      setCurrentMessages([]);
     }
-  }, [selectedChat]);
+  }, [selectedChat, messages]);
+  
+  // Check if a user is typing in the selected chat
+  const isTyping = selectedChat && typingUsers[selectedChat] && typingUsers[selectedChat].length > 0;
+  
+  // Get typing users for display
+  const typingUserIds = selectedChat ? typingUsers[selectedChat] || [] : [];
   
   // Handle send message
   const handleSendMessage = () => {
-    if (!message.trim() || !selectedChat) return;
+    if (!message.trim() || !selectedChat || !user) return;
     
-    // In a real app, you would send this to your backend/websocket
-    const newMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: "current-user-id", // This would be the current user's ID
-      text: message,
-      timestamp: new Date(),
-      isRead: false,
-    };
+    // Send message through WebSocket
+    wsSendMessage(selectedChat, message);
     
-    // Update local state (this would be handled by your backend in a real app)
-    setCurrentMessages([...currentMessages, newMessage]);
+    // Clear input
     setMessage("");
+    
+    // Clear typing status
+    sendTypingStatus(selectedChat, false);
   };
   
   // Animation variants

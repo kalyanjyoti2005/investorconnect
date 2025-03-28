@@ -22,12 +22,21 @@ import {
   insertHackathonTeamSchema,
   insertHackathonTeamMemberSchema,
   insertHackathonChatMessageSchema,
-  insertBadgeSchema
+  insertBadgeSchema,
+  insertCoffeeAvailabilitySchema,
+  insertCoffeePreferenceSchema,
+  insertCoffeeMeetingSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
+  
+  // Create HTTP server for the Express app
+  const server = createServer(app);
+  
+  // Setup WebSocket server
+  setupWebSocketServer(server);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: any, res: any, next: any) => {
@@ -1112,11 +1121,239 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
+
   
-  // Set up WebSocket server for real-time chat
-  const wss = setupWebSocketServer(httpServer);
-  console.log('WebSocket server initialized on path: /ws');
+  // Set up WebSocket server for real-time chat (already set up at the beginning of this file)
+  console.log('WebSocket server is running on path: /ws');
   
-  return httpServer;
+  // Coffee availability routes
+  app.get("/api/coffee/availability", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const availabilities = await storage.getCoffeeAvailabilitiesByUserId(userId);
+      res.json(availabilities);
+    } catch (error) {
+      console.error("Error fetching coffee availabilities:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/coffee/availability", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertCoffeeAvailabilitySchema.parse({
+        ...req.body,
+        userId: req.user!.id
+      });
+      
+      const availability = await storage.createCoffeeAvailability(validatedData);
+      res.status(201).json(availability);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/coffee/availability/:id", isAuthenticated, async (req, res) => {
+    try {
+      const availabilityId = parseInt(req.params.id);
+      const availability = await storage.getCoffeeAvailability(availabilityId);
+      
+      if (!availability) {
+        return res.status(404).json({ message: "Availability not found" });
+      }
+      
+      if (availability.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      const updatedAvailability = await storage.updateCoffeeAvailability(availabilityId, req.body);
+      res.json(updatedAvailability);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/coffee/availability/:id", isAuthenticated, async (req, res) => {
+    try {
+      const availabilityId = parseInt(req.params.id);
+      const availability = await storage.getCoffeeAvailability(availabilityId);
+      
+      if (!availability) {
+        return res.status(404).json({ message: "Availability not found" });
+      }
+      
+      if (availability.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      await storage.deleteCoffeeAvailability(availabilityId);
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Coffee preference routes
+  app.get("/api/coffee/preference", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const preference = await storage.getCoffeePreferenceByUserId(userId);
+      res.json(preference || null);
+    } catch (error) {
+      console.error("Error fetching coffee preference:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/coffee/preference", isAuthenticated, async (req, res) => {
+    try {
+      // Check if user already has a preference
+      const existingPreference = await storage.getCoffeePreferenceByUserId(req.user!.id);
+      if (existingPreference) {
+        return res.status(400).json({ message: "Preference already exists, use PUT to update" });
+      }
+      
+      const validatedData = insertCoffeePreferenceSchema.parse({
+        ...req.body,
+        userId: req.user!.id
+      });
+      
+      const preference = await storage.createCoffeePreference(validatedData);
+      res.status(201).json(preference);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/coffee/preference", isAuthenticated, async (req, res) => {
+    try {
+      // Get existing preference
+      const existingPreference = await storage.getCoffeePreferenceByUserId(req.user!.id);
+      if (!existingPreference) {
+        return res.status(404).json({ message: "Preference not found, use POST to create" });
+      }
+      
+      const updatedPreference = await storage.updateCoffeePreference(existingPreference.id, req.body);
+      res.json(updatedPreference);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Coffee meeting routes
+  app.get("/api/coffee/meetings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const meetings = await storage.getCoffeeMeetingsByUserId(userId);
+      res.json(meetings);
+    } catch (error) {
+      console.error("Error fetching coffee meetings:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/coffee/meetings", isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertCoffeeMeetingSchema.parse({
+        ...req.body,
+        requesterId: req.user!.id
+      });
+      
+      // Check if recipient exists
+      const recipient = await storage.getUser(validatedData.recipientId);
+      if (!recipient) {
+        return res.status(404).json({ message: "Recipient not found" });
+      }
+      
+      const meeting = await storage.createCoffeeMeeting(validatedData);
+      res.status(201).json(meeting);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/coffee/meetings/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const meetingId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!status || !["pending", "accepted", "declined", "completed", "canceled"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const meeting = await storage.getCoffeeMeeting(meetingId);
+      if (!meeting) {
+        return res.status(404).json({ message: "Meeting not found" });
+      }
+      
+      // Only recipient can accept/decline, only requester can cancel
+      if (
+        (status === "accepted" || status === "declined") && meeting.recipientId !== req.user!.id ||
+        (status === "canceled") && meeting.requesterId !== req.user!.id
+      ) {
+        return res.status(403).json({ message: "Not authorized to update this meeting status" });
+      }
+      
+      // Both can mark as completed
+      if (status === "completed" && meeting.recipientId !== req.user!.id && meeting.requesterId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized to update this meeting status" });
+      }
+      
+      const updatedMeeting = await storage.updateCoffeeMeetingStatus(meetingId, status);
+      res.json(updatedMeeting);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Match users for coffee chats
+  app.get("/api/coffee/matches", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const count = req.query.count ? parseInt(req.query.count as string) : 5;
+      
+      // Find matching users
+      const matches = await storage.findMatchingUsers(userId, count);
+      
+      // Fetch the user details for each match
+      const matchesWithDetails = await Promise.all(
+        matches.map(async (match) => {
+          const user = await storage.getUser(match.userId);
+          if (!user) return null;
+          
+          // Don't expose sensitive user information
+          const { password, ...safeUser } = user;
+          
+          return {
+            ...match,
+            user: safeUser
+          };
+        })
+      );
+      
+      // Filter out any nulls
+      const validMatches = matchesWithDetails.filter(match => match !== null);
+      
+      res.json(validMatches);
+    } catch (error) {
+      console.error("Error finding matches:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  return server;
 }

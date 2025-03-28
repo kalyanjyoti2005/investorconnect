@@ -19,6 +19,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
 import { OnboardingProvider } from "./context/onboarding-context";
+import { ChatProvider } from "./context/chat-context";
 
 function Router() {
   return (
@@ -69,10 +70,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="startupmatch-theme">
         <AuthProvider>
-          <OnboardingProvider>
-            <Router />
-            <Toaster />
-          </OnboardingProvider>
+          <ChatProvider>
+            <OnboardingProvider>
+              <Router />
+              <Toaster />
+            </OnboardingProvider>
+          </ChatProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

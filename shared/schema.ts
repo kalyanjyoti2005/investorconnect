@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, pgEnum, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -198,6 +198,48 @@ export const badges = pgTable("badges", {
   awardedAt: timestamp("awarded_at").defaultNow().notNull(),
 });
 
+// Coffee chat availability slots
+export const coffeeAvailability = pgTable("coffee_availability", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6 (Sunday-Saturday)
+  startTime: text("start_time").notNull(), // HH:MM 24h format
+  endTime: text("end_time").notNull(), // HH:MM 24h format
+  isRecurring: boolean("is_recurring").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Coffee chat preferences
+export const coffeePreferences = pgTable("coffee_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  preferredTopics: text("preferred_topics").array(), // Array of topics interested in discussing
+  preferredRoles: text("preferred_roles").array(), // Array of roles they want to meet (founder, investor, etc.)
+  preferredIndustries: text("preferred_industries").array(), // Array of industries they want to connect with
+  meetingFrequency: text("meeting_frequency").notNull(), // weekly, bi-weekly, monthly
+  maxMeetingsPerWeek: integer("max_meetings_per_week").default(2),
+  virtualOnly: boolean("virtual_only").default(true),
+  bio: text("bio"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Coffee chat meetings
+export const coffeeMeetings = pgTable("coffee_meetings", {
+  id: serial("id").primaryKey(),
+  requesterId: integer("requester_id").notNull().references(() => users.id),
+  recipientId: integer("recipient_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, accepted, declined, completed, cancelled
+  scheduledDate: timestamp("scheduled_date"),
+  scheduledEndTime: timestamp("scheduled_end_time"),
+  meetingUrl: text("meeting_url"), // For virtual meetings
+  matchScore: real("match_score"), // How well the algorithm matched these users (0-1)
+  matchReason: text("match_reason"), // Why these users were matched
+  notes: text("notes"), // Pre-meeting notes or agenda
+  feedback: text("feedback"), // Post-meeting feedback
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Zod schemas for insertions
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertStartupSchema = createInsertSchema(startups).omit({ id: true, createdAt: true, currentFunding: true, trendingScore: true });
@@ -218,6 +260,11 @@ export const insertHackathonTeamSchema = createInsertSchema(hackathonTeams).omit
 export const insertHackathonTeamMemberSchema = createInsertSchema(hackathonTeamMembers).omit({ id: true, joinedAt: true });
 export const insertHackathonChatMessageSchema = createInsertSchema(hackathonChatMessages).omit({ id: true, createdAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, awardedAt: true });
+
+// Coffee chat schemas
+export const insertCoffeeAvailabilitySchema = createInsertSchema(coffeeAvailability).omit({ id: true, createdAt: true });
+export const insertCoffeePreferenceSchema = createInsertSchema(coffeePreferences).omit({ id: true, updatedAt: true });
+export const insertCoffeeMeetingSchema = createInsertSchema(coffeeMeetings).omit({ id: true, createdAt: true, updatedAt: true, status: true });
 
 // Type exports for insertion
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -240,6 +287,11 @@ export type InsertHackathonTeamMember = z.infer<typeof insertHackathonTeamMember
 export type InsertHackathonChatMessage = z.infer<typeof insertHackathonChatMessageSchema>;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 
+// Coffee chat insertion types
+export type InsertCoffeeAvailability = z.infer<typeof insertCoffeeAvailabilitySchema>;
+export type InsertCoffeePreference = z.infer<typeof insertCoffeePreferenceSchema>;
+export type InsertCoffeeMeeting = z.infer<typeof insertCoffeeMeetingSchema>;
+
 // Type exports for selection
 export type User = typeof users.$inferSelect;
 export type Startup = typeof startups.$inferSelect;
@@ -260,6 +312,11 @@ export type HackathonTeam = typeof hackathonTeams.$inferSelect;
 export type HackathonTeamMember = typeof hackathonTeamMembers.$inferSelect;
 export type HackathonChatMessage = typeof hackathonChatMessages.$inferSelect;
 export type Badge = typeof badges.$inferSelect;
+
+// Coffee chat selection types
+export type CoffeeAvailability = typeof coffeeAvailability.$inferSelect;
+export type CoffeePreference = typeof coffeePreferences.$inferSelect;
+export type CoffeeMeeting = typeof coffeeMeetings.$inferSelect;
 
 // Additional login schema
 export const loginSchema = z.object({

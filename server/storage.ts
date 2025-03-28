@@ -1,10 +1,13 @@
 import {
   users, startups, investments, milestones, ndas, messages, events, eventParticipants, votes, notifications,
   discussions, discussionComments, discussionVotes, hackathonTeams, hackathonTeamMembers, hackathonChatMessages, badges,
+  coffeeAvailability, coffeePreferences, coffeeMeetings,
   type User, type Startup, type Investment, type Milestone, type Nda, type Message, type Event, type EventParticipant, type Vote, type Notification,
   type Discussion, type DiscussionComment, type DiscussionVote, type HackathonTeam, type HackathonTeamMember, type HackathonChatMessage, type Badge,
+  type CoffeeAvailability, type CoffeePreference, type CoffeeMeeting,
   type InsertUser, type InsertStartup, type InsertInvestment, type InsertMilestone, type InsertNda, type InsertMessage, type InsertEvent, type InsertEventParticipant, type InsertVote, type InsertNotification,
-  type InsertDiscussion, type InsertDiscussionComment, type InsertDiscussionVote, type InsertHackathonTeam, type InsertHackathonTeamMember, type InsertHackathonChatMessage, type InsertBadge
+  type InsertDiscussion, type InsertDiscussionComment, type InsertDiscussionVote, type InsertHackathonTeam, type InsertHackathonTeamMember, type InsertHackathonChatMessage, type InsertBadge,
+  type InsertCoffeeAvailability, type InsertCoffeePreference, type InsertCoffeeMeeting
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -119,6 +122,27 @@ export interface IStorage {
   getBadgesByUserId(userId: number): Promise<Badge[]>;
   createBadge(badge: InsertBadge): Promise<Badge>;
   
+  // Coffee availability methods
+  getCoffeeAvailability(id: number): Promise<CoffeeAvailability | undefined>;
+  getCoffeeAvailabilitiesByUserId(userId: number): Promise<CoffeeAvailability[]>;
+  createCoffeeAvailability(availability: InsertCoffeeAvailability): Promise<CoffeeAvailability>;
+  updateCoffeeAvailability(id: number, availability: Partial<CoffeeAvailability>): Promise<CoffeeAvailability | undefined>;
+  deleteCoffeeAvailability(id: number): Promise<void>;
+  
+  // Coffee preference methods
+  getCoffeePreference(id: number): Promise<CoffeePreference | undefined>;
+  getCoffeePreferenceByUserId(userId: number): Promise<CoffeePreference | undefined>;
+  createCoffeePreference(preference: InsertCoffeePreference): Promise<CoffeePreference>;
+  updateCoffeePreference(id: number, preference: Partial<CoffeePreference>): Promise<CoffeePreference | undefined>;
+  
+  // Coffee meeting methods
+  getCoffeeMeeting(id: number): Promise<CoffeeMeeting | undefined>;
+  getCoffeeMeetingsByUserId(userId: number): Promise<CoffeeMeeting[]>;
+  getCoffeeMeetingsBetweenUsers(user1Id: number, user2Id: number): Promise<CoffeeMeeting[]>;
+  createCoffeeMeeting(meeting: InsertCoffeeMeeting): Promise<CoffeeMeeting>;
+  updateCoffeeMeetingStatus(id: number, status: string): Promise<CoffeeMeeting | undefined>;
+  findMatchingUsers(userId: number, count?: number): Promise<{userId: number, matchScore: number, matchReason: string}[]>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -143,6 +167,11 @@ export class MemStorage implements IStorage {
   private hackathonTeamMembersMap: Map<number, HackathonTeamMember>;
   private hackathonChatMessagesMap: Map<number, HackathonChatMessage>;
   private badgesMap: Map<number, Badge>;
+  
+  // Coffee chat related maps
+  private coffeeAvailabilityMap: Map<number, CoffeeAvailability>;
+  private coffeePreferenceMap: Map<number, CoffeePreference>;
+  private coffeeMeetingMap: Map<number, CoffeeMeeting>;
 
   sessionStore: session.Store;
   
@@ -165,6 +194,11 @@ export class MemStorage implements IStorage {
   private hackathonTeamMemberIdCounter: number = 1;
   private hackathonChatMessageIdCounter: number = 1;
   private badgeIdCounter: number = 1;
+  
+  // Coffee chat related counters
+  private coffeeAvailabilityIdCounter: number = 1;
+  private coffeePreferenceIdCounter: number = 1;
+  private coffeeMeetingIdCounter: number = 1;
 
   constructor() {
     this.usersMap = new Map();
@@ -186,6 +220,11 @@ export class MemStorage implements IStorage {
     this.hackathonTeamMembersMap = new Map();
     this.hackathonChatMessagesMap = new Map();
     this.badgesMap = new Map();
+    
+    // Initialize coffee chat related maps
+    this.coffeeAvailabilityMap = new Map();
+    this.coffeePreferenceMap = new Map();
+    this.coffeeMeetingMap = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
@@ -913,10 +952,233 @@ export class MemStorage implements IStorage {
     
     return newBadge;
   }
+  
+  // Coffee availability methods
+  async getCoffeeAvailability(id: number): Promise<CoffeeAvailability | undefined> {
+    return this.coffeeAvailabilityMap.get(id);
+  }
+  
+  async getCoffeeAvailabilitiesByUserId(userId: number): Promise<CoffeeAvailability[]> {
+    return Array.from(this.coffeeAvailabilityMap.values())
+      .filter(availability => availability.userId === userId)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
+  
+  async createCoffeeAvailability(availability: InsertCoffeeAvailability): Promise<CoffeeAvailability> {
+    const id = this.coffeeAvailabilityIdCounter++;
+    const now = new Date();
+    const newAvailability: CoffeeAvailability = { 
+      ...availability, 
+      id, 
+      createdAt: now,
+      isRecurring: availability.isRecurring ?? true 
+    };
+    this.coffeeAvailabilityMap.set(id, newAvailability);
+    return newAvailability;
+  }
+  
+  async updateCoffeeAvailability(id: number, availabilityUpdate: Partial<CoffeeAvailability>): Promise<CoffeeAvailability | undefined> {
+    const availability = await this.getCoffeeAvailability(id);
+    if (!availability) return undefined;
+    
+    const updatedAvailability = { ...availability, ...availabilityUpdate };
+    this.coffeeAvailabilityMap.set(id, updatedAvailability);
+    return updatedAvailability;
+  }
+  
+  async deleteCoffeeAvailability(id: number): Promise<void> {
+    this.coffeeAvailabilityMap.delete(id);
+  }
+  
+  // Coffee preference methods
+  async getCoffeePreference(id: number): Promise<CoffeePreference | undefined> {
+    return this.coffeePreferenceMap.get(id);
+  }
+  
+  async getCoffeePreferenceByUserId(userId: number): Promise<CoffeePreference | undefined> {
+    return Array.from(this.coffeePreferenceMap.values())
+      .find(preference => preference.userId === userId);
+  }
+  
+  async createCoffeePreference(preference: InsertCoffeePreference): Promise<CoffeePreference> {
+    const id = this.coffeePreferenceIdCounter++;
+    const now = new Date();
+    const newPreference: CoffeePreference = { 
+      ...preference, 
+      id, 
+      updatedAt: now,
+      preferredTopics: preference.preferredTopics || null,
+      preferredRoles: preference.preferredRoles || null,
+      preferredIndustries: preference.preferredIndustries || null,
+      bio: preference.bio || null,
+      maxMeetingsPerWeek: preference.maxMeetingsPerWeek ?? 2,
+      virtualOnly: preference.virtualOnly ?? true
+    };
+    this.coffeePreferenceMap.set(id, newPreference);
+    return newPreference;
+  }
+  
+  async updateCoffeePreference(id: number, preferenceUpdate: Partial<CoffeePreference>): Promise<CoffeePreference | undefined> {
+    const preference = await this.getCoffeePreference(id);
+    if (!preference) return undefined;
+    
+    const now = new Date();
+    const updatedPreference = { ...preference, ...preferenceUpdate, updatedAt: now };
+    this.coffeePreferenceMap.set(id, updatedPreference);
+    return updatedPreference;
+  }
+  
+  // Coffee meeting methods
+  async getCoffeeMeeting(id: number): Promise<CoffeeMeeting | undefined> {
+    return this.coffeeMeetingMap.get(id);
+  }
+  
+  async getCoffeeMeetingsByUserId(userId: number): Promise<CoffeeMeeting[]> {
+    return Array.from(this.coffeeMeetingMap.values())
+      .filter(meeting => meeting.requesterId === userId || meeting.recipientId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by newest first
+  }
+  
+  async getCoffeeMeetingsBetweenUsers(user1Id: number, user2Id: number): Promise<CoffeeMeeting[]> {
+    return Array.from(this.coffeeMeetingMap.values())
+      .filter(meeting => 
+        (meeting.requesterId === user1Id && meeting.recipientId === user2Id) ||
+        (meeting.requesterId === user2Id && meeting.recipientId === user1Id)
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Sort by newest first
+  }
+  
+  async createCoffeeMeeting(meeting: InsertCoffeeMeeting): Promise<CoffeeMeeting> {
+    const id = this.coffeeMeetingIdCounter++;
+    const now = new Date();
+    const newMeeting: CoffeeMeeting = { 
+      ...meeting, 
+      id, 
+      createdAt: now, 
+      updatedAt: now,
+      status: 'pending',
+      meetingUrl: meeting.meetingUrl || null,
+      scheduledDate: meeting.scheduledDate || null,
+      scheduledEndTime: meeting.scheduledEndTime || null,
+      matchScore: meeting.matchScore || null,
+      matchReason: meeting.matchReason || null,
+      notes: meeting.notes || null,
+      feedback: null
+    };
+    this.coffeeMeetingMap.set(id, newMeeting);
+    
+    // Create a notification for the recipient
+    await this.createNotification({
+      userId: meeting.recipientId,
+      type: 'message',
+      content: `You have a new coffee chat request${meeting.scheduledDate ? ` for ${new Date(meeting.scheduledDate).toLocaleDateString()}` : ''}.`,
+      relatedId: id
+    });
+    
+    return newMeeting;
+  }
+  
+  async updateCoffeeMeetingStatus(id: number, status: string): Promise<CoffeeMeeting | undefined> {
+    const meeting = await this.getCoffeeMeeting(id);
+    if (!meeting) return undefined;
+    
+    const now = new Date();
+    const updatedMeeting = { ...meeting, status: status as any, updatedAt: now };
+    this.coffeeMeetingMap.set(id, updatedMeeting);
+    
+    // Create a notification for the requester about the status change
+    await this.createNotification({
+      userId: meeting.requesterId,
+      type: 'message',
+      content: `Your coffee chat request${meeting.scheduledDate ? ` for ${new Date(meeting.scheduledDate).toLocaleDateString()}` : ''} has been ${status}.`,
+      relatedId: id
+    });
+    
+    return updatedMeeting;
+  }
+  
+  async findMatchingUsers(userId: number, count: number = 5): Promise<{userId: number, matchScore: number, matchReason: string}[]> {
+    const user = await this.getUser(userId);
+    if (!user) return [];
+    
+    const userPreference = await this.getCoffeePreferenceByUserId(userId);
+    if (!userPreference) return [];
+    
+    // Get all users
+    const allUsers = Array.from(this.usersMap.values())
+      .filter(u => u.id !== userId); // Exclude the current user
+    
+    // Calculate match scores
+    const matches = await Promise.all(
+      allUsers.map(async (otherUser) => {
+        const otherUserPreference = await this.getCoffeePreferenceByUserId(otherUser.id);
+        if (!otherUserPreference) return null;
+        
+        // Calculate match score based on role compatibility 
+        // (founders match well with investors and vice versa)
+        let matchScore = 0;
+        let matchReason = '';
+        
+        if (user.role === 'founder' && otherUser.role === 'investor' || 
+            user.role === 'investor' && otherUser.role === 'founder') {
+          matchScore += 30;
+          matchReason += 'Complementary roles. ';
+        }
+        
+        // Check for shared interests if both users have specified them
+        if (userPreference.preferredTopics && otherUserPreference.preferredTopics) {
+          const userTopics = userPreference.preferredTopics.map(t => t.toLowerCase());
+          const otherTopics = otherUserPreference.preferredTopics.map(t => t.toLowerCase());
+          
+          const sharedTopics = userTopics.filter(topic => otherTopics.includes(topic));
+          if (sharedTopics.length > 0) {
+            matchScore += sharedTopics.length * 10;
+            matchReason += `Shared interests in: ${sharedTopics.join(', ')}. `;
+          }
+        }
+        
+        // Check for virtual/in-person preference match
+        if (userPreference.virtualOnly === otherUserPreference.virtualOnly) {
+          matchScore += 20;
+          matchReason += `Same ${userPreference.virtualOnly ? 'virtual' : 'in-person'} meeting preference. `;
+        }
+        
+        // Check previous meetings (fewer is better for new connections)
+        const previousMeetings = await this.getCoffeeMeetingsBetweenUsers(userId, otherUser.id);
+        if (previousMeetings.length === 0) {
+          matchScore += 15;
+          matchReason += 'No previous meetings. ';
+        } else {
+          // If they've met before but not recently, still a decent match
+          const mostRecentMeeting = previousMeetings[0];
+          if (mostRecentMeeting.scheduledDate) {
+            const daysSinceLastMeeting = (Date.now() - new Date(mostRecentMeeting.scheduledDate).getTime()) / (1000 * 60 * 60 * 24);
+            
+            if (daysSinceLastMeeting > 30) {
+              matchScore += 5;
+              matchReason += 'Met more than a month ago. ';
+            }
+          }
+        }
+        
+        return {
+          userId: otherUser.id,
+          matchScore,
+          matchReason: matchReason.trim()
+        };
+      })
+    );
+    
+    // Filter out nulls and sort by match score descending
+    return matches
+      .filter((match): match is {userId: number, matchScore: number, matchReason: string} => match !== null)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, count);
+  }
 }
 
 import { DatabaseStorage } from "./database-storage";
 
-// Comment out MemStorage and use DatabaseStorage instead
-// export const storage = new MemStorage();
-export const storage = new DatabaseStorage();
+// Use MemStorage for now until we implement the coffee chat methods in DatabaseStorage
+export const storage = new MemStorage();
+// export const storage = new DatabaseStorage();
