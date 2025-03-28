@@ -32,7 +32,8 @@ import {
   ThumbsUp, ThumbsDown, CheckCircle, Pin, Search,
   ArrowUp, ArrowDown, CheckCircle2, Award, RefreshCw,
   UserPlus, Video, SendHorizontal, Smile, PlusCircle,
-  Filter, Bookmark, Share2, MoreVertical, User
+  Filter, Bookmark, Share2, MoreVertical, User,
+  Coins, Target
 } from 'lucide-react';
 
 // Custom Components
@@ -1452,51 +1453,19 @@ interface Notification {
 }
 
 const NotificationsTab = ({ user }: NotificationsTabProps) => {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<"all" | "unread" | "discussion" | "badge" | "event" | "message" | "investment" | "milestone">("all");
   
-  // Fetch notifications from API - for now using placeholder data
-  const notifications = [
-    {
-      id: 1,
-      type: "badge",
-      content: "You've been awarded the 'Top Contributor' badge!",
-      relatedId: 123,
-      createdAt: new Date(Date.now() - 3600000 * 2),
-      read: false
-    },
-    {
-      id: 2,
-      type: "discussion",
-      content: "Alex Johnson replied to your discussion: 'Funding Strategies'",
-      relatedId: 456,
-      createdAt: new Date(Date.now() - 3600000 * 5),
-      read: false
-    },
-    {
-      id: 3,
-      type: "event",
-      content: "Reminder: 'Fundraising Workshop' starts in 2 hours",
-      relatedId: 789,
-      createdAt: new Date(Date.now() - 3600000 * 12),
-      read: true
-    },
-    {
-      id: 4,
-      type: "message",
-      content: "You have a new message from Sarah Chen",
-      relatedId: 101,
-      createdAt: new Date(Date.now() - 3600000 * 24),
-      read: true
-    },
-    {
-      id: 5,
-      type: "discussion",
-      content: "Your discussion 'AI in Startups' is trending with 15 new replies",
-      relatedId: 102,
-      createdAt: new Date(Date.now() - 3600000 * 48),
-      read: true
+  // Fetch notifications from API
+  const { data: notifications = [], isLoading: isLoadingNotifications } = useQuery<Notification[]>({
+    queryKey: ['/api/notifications'],
+    queryFn: async () => {
+      const response = await fetch(`/api/notifications?userId=${user.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
+      }
+      return response.json();
     }
-  ];
+  });
   
   const formatNotificationTime = (date: Date): string => {
     const now = new Date();
@@ -1543,7 +1512,14 @@ const NotificationsTab = ({ user }: NotificationsTabProps) => {
         <div className="flex justify-between items-center">
           <CardTitle>Your Notifications</CardTitle>
           <div className="flex gap-2">
-            <Select value={filter} onValueChange={setFilter}>
+            <Select 
+              value={filter} 
+              onValueChange={(value: string) => {
+                // Assert that the value is one of the allowed filter types
+                const typedValue = value as "all" | "unread" | "discussion" | "badge" | "event" | "message" | "investment" | "milestone";
+                setFilter(typedValue);
+              }}
+            >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
@@ -1554,37 +1530,49 @@ const NotificationsTab = ({ user }: NotificationsTabProps) => {
                 <SelectItem value="discussion">Discussions</SelectItem>
                 <SelectItem value="event">Events</SelectItem>
                 <SelectItem value="message">Messages</SelectItem>
+                <SelectItem value="investment">Investments</SelectItem>
+                <SelectItem value="milestone">Milestones</SelectItem>
               </SelectContent>
             </Select>
             
-            <Button variant="outline" size="icon">
-              <RefreshCw className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/notifications'] })}
+              disabled={isLoadingNotifications}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingNotifications ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {filteredNotifications.map(notification => (
-          <div 
-            key={notification.id} 
-            className={`flex items-start gap-4 p-3 rounded-md ${notification.read ? "" : "bg-primary/5"} hover:bg-muted`}
-          >
-            <div className="mt-1">
-              {getNotificationIcon(notification.type)}
-            </div>
-            <div className="flex-grow">
-              <p className={`${notification.read ? "" : "font-medium"}`}>{notification.content}</p>
-              <p className="text-xs text-muted-foreground mt-1">{formatNotificationTime(notification.createdAt)}</p>
-            </div>
-            {!notification.read && (
-              <div className="flex-shrink-0">
-                <div className="h-2 w-2 rounded-full bg-primary"></div>
-              </div>
-            )}
+        {isLoadingNotifications ? (
+          <div className="text-center py-8">
+            <LoadingSpinner size="lg" />
+            <p className="text-muted-foreground mt-4">Loading notifications...</p>
           </div>
-        ))}
-        
-        {filteredNotifications.length === 0 && (
+        ) : filteredNotifications.length > 0 ? (
+          filteredNotifications.map(notification => (
+            <div 
+              key={notification.id} 
+              className={`flex items-start gap-4 p-3 rounded-md ${notification.read ? "" : "bg-primary/5"} hover:bg-muted`}
+            >
+              <div className="mt-1">
+                {getNotificationIcon(notification.type)}
+              </div>
+              <div className="flex-grow">
+                <p className={`${notification.read ? "" : "font-medium"}`}>{notification.content}</p>
+                <p className="text-xs text-muted-foreground mt-1">{formatNotificationTime(notification.createdAt)}</p>
+              </div>
+              {!notification.read && (
+                <div className="flex-shrink-0">
+                  <div className="h-2 w-2 rounded-full bg-primary"></div>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
           <div className="text-center py-8">
             <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-medium mb-2">No notifications</h3>

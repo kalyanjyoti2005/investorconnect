@@ -16,14 +16,14 @@ import SubmitIdea from "@/pages/submit-idea";
 import InvestorDashboard from "@/pages/investor-dashboard";
 import CommunityPage from "@/pages/community-page";
 import { ProtectedRoute } from "./lib/protected-route";
-import { AuthProvider } from "./hooks/use-auth";
+import { AuthProvider, useAuth } from "./hooks/use-auth";
 import { ThemeProvider } from "./components/theme-provider";
 import { OnboardingProvider } from "./context/onboarding-context";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={LandingPageAnimated} />
+      <Route path="/" component={HomeRedirect} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/explore" component={Explore} />
       <ProtectedRoute path="/investments" component={Investments} />
@@ -34,10 +34,34 @@ function Router() {
       <ProtectedRoute path="/submit-idea" component={SubmitIdea} />
       <ProtectedRoute path="/investor" component={InvestorDashboard} />
       <ProtectedRoute path="/community" component={CommunityPage} />
+      <Route path="/landing" component={LandingPageAnimated} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
+}
+
+// Route to handle redirection based on authentication status
+function HomeRedirect() {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (user) {
+    // If user is logged in, redirect to dashboard
+    window.location.href = "/dashboard";
+    return null;
+  } else {
+    // If user is not logged in, redirect to landing page
+    window.location.href = "/landing";
+    return null;
+  }
 }
 
 function App() {
