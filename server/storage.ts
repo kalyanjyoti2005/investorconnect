@@ -107,6 +107,7 @@ export interface IStorage {
   getHackathonTeamMembersByUserId(userId: number): Promise<HackathonTeamMember[]>;
   createHackathonTeamMember(member: InsertHackathonTeamMember): Promise<HackathonTeamMember>;
   makeTeamLeader(id: number): Promise<HackathonTeamMember | undefined>;
+  removeHackathonTeamMember(userId: number, teamId: number): Promise<void>;
   
   // Hackathon chat message methods
   getHackathonChatMessage(id: number): Promise<HackathonChatMessage | undefined>;

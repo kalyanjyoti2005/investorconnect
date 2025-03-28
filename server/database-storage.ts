@@ -1,7 +1,10 @@
 import { 
   users, startups, investments, milestones, ndas, messages, events, eventParticipants, votes, notifications,
+  discussions, discussionComments, discussionVotes, hackathonTeams, hackathonTeamMembers, hackathonChatMessages, badges,
   type User, type Startup, type Investment, type Milestone, type Nda, type Message, type Event, type EventParticipant, type Vote, type Notification,
-  type InsertUser, type InsertStartup, type InsertInvestment, type InsertMilestone, type InsertNda, type InsertMessage, type InsertEvent, type InsertEventParticipant, type InsertVote, type InsertNotification
+  type Discussion, type DiscussionComment, type DiscussionVote, type HackathonTeam, type HackathonTeamMember, type HackathonChatMessage, type Badge,
+  type InsertUser, type InsertStartup, type InsertInvestment, type InsertMilestone, type InsertNda, type InsertMessage, type InsertEvent, type InsertEventParticipant, type InsertVote, type InsertNotification,
+  type InsertDiscussion, type InsertDiscussionComment, type InsertDiscussionVote, type InsertHackathonTeam, type InsertHackathonTeamMember, type InsertHackathonChatMessage, type InsertBadge
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, asc } from "drizzle-orm";
@@ -357,5 +360,316 @@ export class DatabaseStorage implements IStorage {
       .where(eq(notifications.id, id))
       .returning();
     return updatedNotification;
+  }
+
+  // Discussion methods
+  async getDiscussion(id: number): Promise<Discussion | undefined> {
+    const [discussion] = await db.select().from(discussions).where(eq(discussions.id, id));
+    return discussion;
+  }
+
+  async getAllDiscussions(): Promise<Discussion[]> {
+    return await db.select().from(discussions).orderBy(desc(discussions.createdAt));
+  }
+
+  async getDiscussionsByTag(tag: string): Promise<Discussion[]> {
+    return await db.select().from(discussions)
+      .where(eq(discussions.tag, tag as any))
+      .orderBy(desc(discussions.createdAt));
+  }
+
+  async getDiscussionsByAuthor(authorId: number): Promise<Discussion[]> {
+    return await db.select().from(discussions)
+      .where(eq(discussions.authorId, authorId))
+      .orderBy(desc(discussions.createdAt));
+  }
+
+  async createDiscussion(discussion: InsertDiscussion): Promise<Discussion> {
+    const [newDiscussion] = await db.insert(discussions).values({
+      ...discussion,
+      upvotes: 0,
+      downvotes: 0,
+      isPinned: false,
+      isVerified: false
+    }).returning();
+    return newDiscussion;
+  }
+
+  async updateDiscussion(id: number, discussionUpdate: Partial<Discussion>): Promise<Discussion | undefined> {
+    const [updatedDiscussion] = await db.update(discussions)
+      .set(discussionUpdate)
+      .where(eq(discussions.id, id))
+      .returning();
+    return updatedDiscussion;
+  }
+
+  async pinDiscussion(id: number): Promise<Discussion | undefined> {
+    const [updatedDiscussion] = await db.update(discussions)
+      .set({ isPinned: true })
+      .where(eq(discussions.id, id))
+      .returning();
+    return updatedDiscussion;
+  }
+
+  async verifyDiscussion(id: number): Promise<Discussion | undefined> {
+    const [updatedDiscussion] = await db.update(discussions)
+      .set({ isVerified: true })
+      .where(eq(discussions.id, id))
+      .returning();
+    return updatedDiscussion;
+  }
+
+  // Discussion comment methods
+  async getDiscussionComment(id: number): Promise<DiscussionComment | undefined> {
+    const [comment] = await db.select().from(discussionComments).where(eq(discussionComments.id, id));
+    return comment;
+  }
+
+  async getCommentsByDiscussionId(discussionId: number): Promise<DiscussionComment[]> {
+    return await db.select().from(discussionComments)
+      .where(eq(discussionComments.discussionId, discussionId))
+      .orderBy(asc(discussionComments.createdAt));
+  }
+
+  async createDiscussionComment(comment: InsertDiscussionComment): Promise<DiscussionComment> {
+    const [newComment] = await db.insert(discussionComments).values({
+      ...comment,
+      upvotes: 0,
+      downvotes: 0,
+      isVerified: false
+    }).returning();
+    return newComment;
+  }
+
+  async verifyDiscussionComment(id: number): Promise<DiscussionComment | undefined> {
+    const [updatedComment] = await db.update(discussionComments)
+      .set({ isVerified: true })
+      .where(eq(discussionComments.id, id))
+      .returning();
+    return updatedComment;
+  }
+
+  // Discussion vote methods
+  async getDiscussionVote(id: number): Promise<DiscussionVote | undefined> {
+    const [vote] = await db.select().from(discussionVotes).where(eq(discussionVotes.id, id));
+    return vote;
+  }
+  
+  async updateDiscussionVote(id: number, voteType: number): Promise<DiscussionVote | undefined> {
+    const vote = await this.getDiscussionVote(id);
+    if (!vote) return undefined;
+    
+    const [updatedVote] = await db.update(discussionVotes)
+      .set({ voteType })
+      .where(eq(discussionVotes.id, id))
+      .returning();
+    
+    // Update vote counts
+    if (vote.discussionId) {
+      // Update discussion upvotes and downvotes
+      const allVotes = await db.select().from(discussionVotes)
+        .where(eq(discussionVotes.discussionId, vote.discussionId));
+      
+      const upvotes = allVotes.filter(v => v.voteType === 1).length;
+      const downvotes = allVotes.filter(v => v.voteType === -1).length;
+      
+      await db.update(discussions)
+        .set({ upvotes, downvotes })
+        .where(eq(discussions.id, vote.discussionId));
+    } else if (vote.commentId) {
+      // Update comment upvotes and downvotes
+      const allVotes = await db.select().from(discussionVotes)
+        .where(eq(discussionVotes.commentId, vote.commentId));
+      
+      const upvotes = allVotes.filter(v => v.voteType === 1).length;
+      const downvotes = allVotes.filter(v => v.voteType === -1).length;
+      
+      await db.update(discussionComments)
+        .set({ upvotes, downvotes })
+        .where(eq(discussionComments.id, vote.commentId));
+    }
+    
+    return updatedVote;
+  }
+
+  async getDiscussionVoteByUserAndDiscussion(userId: number, discussionId: number): Promise<DiscussionVote | undefined> {
+    const [vote] = await db.select().from(discussionVotes).where(
+      and(
+        eq(discussionVotes.userId, userId),
+        eq(discussionVotes.discussionId, discussionId)
+      )
+    );
+    return vote;
+  }
+
+  async getDiscussionVoteByUserAndComment(userId: number, commentId: number): Promise<DiscussionVote | undefined> {
+    const [vote] = await db.select().from(discussionVotes).where(
+      and(
+        eq(discussionVotes.userId, userId),
+        eq(discussionVotes.commentId, commentId)
+      )
+    );
+    return vote;
+  }
+
+  async createDiscussionVote(vote: InsertDiscussionVote): Promise<DiscussionVote> {
+    // Check if user already voted
+    let existingVote;
+    if (vote.discussionId) {
+      existingVote = await this.getDiscussionVoteByUserAndDiscussion(vote.userId, vote.discussionId);
+    } else if (vote.commentId) {
+      existingVote = await this.getDiscussionVoteByUserAndComment(vote.userId, vote.commentId);
+    }
+
+    if (existingVote) {
+      // Update existing vote
+      const [updatedVote] = await db.update(discussionVotes)
+        .set({ voteType: vote.voteType })
+        .where(eq(discussionVotes.id, existingVote.id))
+        .returning();
+      
+      // Update vote counts
+      await this.updateVoteCounts(vote);
+      
+      return updatedVote;
+    } else {
+      // Create new vote
+      const [newVote] = await db.insert(discussionVotes).values(vote).returning();
+      
+      // Update vote counts
+      await this.updateVoteCounts(vote);
+      
+      return newVote;
+    }
+  }
+
+  private async updateVoteCounts(vote: InsertDiscussionVote): Promise<void> {
+    if (vote.discussionId) {
+      // Update discussion upvotes and downvotes
+      const allVotes = await db.select().from(discussionVotes)
+        .where(eq(discussionVotes.discussionId, vote.discussionId));
+      
+      const upvotes = allVotes.filter(v => v.voteType === 1).length;
+      const downvotes = allVotes.filter(v => v.voteType === -1).length;
+      
+      await db.update(discussions)
+        .set({ upvotes, downvotes })
+        .where(eq(discussions.id, vote.discussionId));
+    } else if (vote.commentId) {
+      // Update comment upvotes and downvotes
+      const allVotes = await db.select().from(discussionVotes)
+        .where(eq(discussionVotes.commentId, vote.commentId));
+      
+      const upvotes = allVotes.filter(v => v.voteType === 1).length;
+      const downvotes = allVotes.filter(v => v.voteType === -1).length;
+      
+      await db.update(discussionComments)
+        .set({ upvotes, downvotes })
+        .where(eq(discussionComments.id, vote.commentId));
+    }
+  }
+
+  // Hackathon team methods
+  async getHackathonTeam(id: number): Promise<HackathonTeam | undefined> {
+    const [team] = await db.select().from(hackathonTeams).where(eq(hackathonTeams.id, id));
+    return team;
+  }
+
+  async getAllHackathonTeams(): Promise<HackathonTeam[]> {
+    return await db.select().from(hackathonTeams).orderBy(desc(hackathonTeams.createdAt));
+  }
+
+  async createHackathonTeam(team: InsertHackathonTeam): Promise<HackathonTeam> {
+    const [newTeam] = await db.insert(hackathonTeams).values(team).returning();
+    return newTeam;
+  }
+
+  // Hackathon team member methods
+  async getHackathonTeamMember(id: number): Promise<HackathonTeamMember | undefined> {
+    const [member] = await db.select().from(hackathonTeamMembers).where(eq(hackathonTeamMembers.id, id));
+    return member;
+  }
+
+  async getHackathonTeamMembersByTeamId(teamId: number): Promise<HackathonTeamMember[]> {
+    return await db.select().from(hackathonTeamMembers)
+      .where(eq(hackathonTeamMembers.teamId, teamId));
+  }
+
+  async getHackathonTeamMembersByUserId(userId: number): Promise<HackathonTeamMember[]> {
+    return await db.select().from(hackathonTeamMembers)
+      .where(eq(hackathonTeamMembers.userId, userId));
+  }
+
+  async createHackathonTeamMember(member: InsertHackathonTeamMember): Promise<HackathonTeamMember> {
+    const [newMember] = await db.insert(hackathonTeamMembers).values(member).returning();
+    return newMember;
+  }
+  
+  async makeTeamLeader(id: number): Promise<HackathonTeamMember | undefined> {
+    const member = await this.getHackathonTeamMember(id);
+    if (!member) return undefined;
+    
+    // First, unset current team leader
+    const teamMembers = await this.getHackathonTeamMembersByTeamId(member.teamId);
+    const currentLeader = teamMembers.find(m => m.isLeader);
+    
+    if (currentLeader) {
+      const [updatedCurrentLeader] = await db.update(hackathonTeamMembers)
+        .set({ isLeader: false })
+        .where(eq(hackathonTeamMembers.id, currentLeader.id))
+        .returning();
+    }
+    
+    // Make new member the team leader
+    const [updatedMember] = await db.update(hackathonTeamMembers)
+      .set({ isLeader: true })
+      .where(eq(hackathonTeamMembers.id, id))
+      .returning();
+    
+    return updatedMember;
+  }
+
+  async removeHackathonTeamMember(userId: number, teamId: number): Promise<void> {
+    await db.delete(hackathonTeamMembers)
+      .where(
+        and(
+          eq(hackathonTeamMembers.userId, userId),
+          eq(hackathonTeamMembers.teamId, teamId)
+        )
+      );
+  }
+
+  // Hackathon chat message methods
+  async getHackathonChatMessage(id: number): Promise<HackathonChatMessage | undefined> {
+    const [message] = await db.select().from(hackathonChatMessages).where(eq(hackathonChatMessages.id, id));
+    return message;
+  }
+
+  async getHackathonChatMessagesByTeamId(teamId: number): Promise<HackathonChatMessage[]> {
+    return await db.select().from(hackathonChatMessages)
+      .where(eq(hackathonChatMessages.teamId, teamId))
+      .orderBy(asc(hackathonChatMessages.createdAt));
+  }
+
+  async createHackathonChatMessage(message: InsertHackathonChatMessage): Promise<HackathonChatMessage> {
+    const [newMessage] = await db.insert(hackathonChatMessages).values(message).returning();
+    return newMessage;
+  }
+
+  // Badge methods
+  async getBadge(id: number): Promise<Badge | undefined> {
+    const [badge] = await db.select().from(badges).where(eq(badges.id, id));
+    return badge;
+  }
+
+  async getBadgesByUserId(userId: number): Promise<Badge[]> {
+    return await db.select().from(badges)
+      .where(eq(badges.userId, userId))
+      .orderBy(desc(badges.awardedAt));
+  }
+
+  async createBadge(badge: InsertBadge): Promise<Badge> {
+    const [newBadge] = await db.insert(badges).values(badge).returning();
+    return newBadge;
   }
 }

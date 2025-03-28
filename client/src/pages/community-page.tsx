@@ -110,13 +110,38 @@ const CommunityPage = () => {
   );
 };
 
-const DiscussionsTab = ({ user }) => {
+interface TabProps {
+  user: {
+    id: number;
+    name: string;
+    username: string;
+    role: string;
+    [key: string]: any;
+  };
+}
+
+interface Discussion {
+  id: number;
+  title: string;
+  content: string;
+  authorId: number;
+  authorName: string;
+  tags: string[];
+  upvotes: number;
+  downvotes: number;
+  isPinned: boolean;
+  isVerified: boolean;
+  createdAt: string;
+  [key: string]: any;
+}
+
+const DiscussionsTab = ({ user }: TabProps) => {
   const [newPostDialogOpen, setNewPostDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState("all");
   const { toast } = useToast();
   
   // Fetch discussions
-  const { data: discussions, isLoading, error } = useQuery({
+  const { data: discussions, isLoading, error } = useQuery<Discussion[]>({
     queryKey: ['/api/discussions', selectedTag],
     queryFn: () => {
       const endpoint = selectedTag === 'all' 
@@ -129,7 +154,13 @@ const DiscussionsTab = ({ user }) => {
     }
   });
   
-  const handleCreatePost = async (formData) => {
+  interface CreateDiscussionData {
+    title: string;
+    content: string;
+    tag: string;
+  }
+
+  const handleCreatePost = async (formData: CreateDiscussionData) => {
     try {
       const response = await fetch('/api/discussions', {
         method: 'POST',
@@ -154,7 +185,7 @@ const DiscussionsTab = ({ user }) => {
         description: "Your discussion has been published.",
       });
       setNewPostDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error creating post",
         description: error.message,
@@ -319,15 +350,22 @@ const DiscussionsTab = ({ user }) => {
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={(e) => {
+          <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const data = {
-              title: formData.get('title'),
-              content: formData.get('content'),
-              tag: formData.get('tag'),
-            };
-            handleCreatePost(data);
+            const form = e.currentTarget as HTMLFormElement;
+            const formData = new FormData(form);
+            const title = formData.get('title');
+            const content = formData.get('content');
+            const tag = formData.get('tag');
+            
+            if (title && content && tag) {
+              const data: CreateDiscussionData = {
+                title: title.toString(),
+                content: content.toString(),
+                tag: tag.toString(),
+              };
+              handleCreatePost(data);
+            }
           }}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -374,10 +412,15 @@ const DiscussionsTab = ({ user }) => {
   );
 };
 
-const DiscussionCard = ({ discussion, currentUser }) => {
+interface DiscussionCardProps {
+  discussion: Discussion;
+  currentUser: TabProps['user'];
+}
+
+const DiscussionCard = ({ discussion, currentUser }: DiscussionCardProps) => {
   const { toast } = useToast();
   const [score, setScore] = useState(discussion.upvotes - discussion.downvotes);
-  const [userVote, setUserVote] = useState(null); // null, 'up', or 'down'
+  const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
   
   // Check if the user already has a vote on this discussion
   useEffect(() => {
@@ -398,7 +441,7 @@ const DiscussionCard = ({ discussion, currentUser }) => {
     fetchUserVote();
   }, [discussion.id, currentUser.id]);
   
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string) => {
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
     
@@ -412,7 +455,13 @@ const DiscussionCard = ({ discussion, currentUser }) => {
     return `${minutes}m ago`;
   };
   
-  const voteMutation = useMutation({
+  interface VoteData {
+    discussionId: number;
+    userId: number;
+    voteType: number;
+  }
+  
+  const voteMutation = useMutation<any, Error, VoteData>({
     mutationFn: async ({ discussionId, userId, voteType }) => {
       const response = await fetch(`/api/discussions/${discussionId}/vote`, {
         method: 'POST',
@@ -443,7 +492,7 @@ const DiscussionCard = ({ discussion, currentUser }) => {
     },
   });
   
-  const handleVote = (type) => {
+  const handleVote = (type: 'up' | 'down') => {
     const voteType = type === 'up' ? 1 : -1;
     
     // If user already voted the same way, they're removing their vote
@@ -478,10 +527,10 @@ const DiscussionCard = ({ discussion, currentUser }) => {
         <div className="flex justify-between">
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
-              <AvatarFallback>{discussion.author.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{discussion.authorName ? discussion.authorName.charAt(0) : 'U'}</AvatarFallback>
             </Avatar>
-            <span className="font-medium text-sm">{discussion.author.name}</span>
-            <span className="text-xs text-muted-foreground">@{discussion.author.username}</span>
+            <span className="font-medium text-sm">{discussion.authorName || 'User'}</span>
+            <span className="text-xs text-muted-foreground">ID: {discussion.authorId}</span>
           </div>
           
           <div className="flex items-center gap-2">
