@@ -423,13 +423,13 @@ export default function ChatLayout() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-9 w-9">
                   <AvatarFallback>
-                    {sampleChatRooms.find(room => room.id === selectedChat)?.name[0] || 'C'}
+                    {convertedChatRooms.find(room => room.id === selectedChat)?.name[0] || 'C'}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div>
                   <h3 className="font-medium">
-                    {sampleChatRooms.find(room => room.id === selectedChat)?.name || 'Chat'}
+                    {convertedChatRooms.find(room => room.id === selectedChat)?.name || 'Chat'}
                   </h3>
                   <div className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-green-500"></span>
@@ -458,7 +458,7 @@ export default function ChatLayout() {
                   <MessageBubble 
                     key={msg.id} 
                     message={msg} 
-                    isCurrentUser={msg.senderId === "current-user-id"} 
+                    isCurrentUser={msg.senderId === user?.id.toString()} 
                   />
                 ))
               ) : (
@@ -564,12 +564,12 @@ export default function ChatLayout() {
           <div className="p-4 flex flex-col items-center border-b">
             <Avatar className="h-20 w-20 mb-3">
               <AvatarFallback className="text-xl">
-                {sampleChatRooms.find(room => room.id === selectedChat)?.name[0] || 'C'}
+                {convertedChatRooms.find(room => room.id === selectedChat)?.name[0] || 'C'}
               </AvatarFallback>
             </Avatar>
             
             <h3 className="font-bold text-lg">
-              {sampleChatRooms.find(room => room.id === selectedChat)?.name || 'Chat'}
+              {convertedChatRooms.find(room => room.id === selectedChat)?.name || 'Chat'}
             </h3>
             <p className="text-sm text-muted-foreground mb-3">Startup Founder</p>
             
