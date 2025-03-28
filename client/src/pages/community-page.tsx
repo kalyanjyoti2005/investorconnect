@@ -1233,67 +1233,56 @@ interface Event {
   location: string;
   attendees: number;
   isRsvp: boolean;
+  recordingUrl?: string;
+  materialsUrl?: string;
 }
 
 const EventsTab = ({ user }: EventsTabProps) => {
   const [upcomingTab, setUpcomingTab] = useState("upcoming");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const { toast } = useToast();
+  const isAdmin = user.role === "admin" || user.role === "investor"; // Giving investor role admin capabilities for events too
   
-  // Fetch events from API - for now using placeholder data
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "Fundraising Strategies for Early-Stage Startups",
-      description: "Learn proven strategies to secure seed funding and angel investments",
-      startTime: new Date(2025, 3, 15, 14, 0),
-      endTime: new Date(2025, 3, 15, 16, 0),
-      location: "Virtual (Zoom)",
-      attendees: 78,
-      isRsvp: true
-    },
-    {
-      id: 2,
-      title: "AI in Business: Practical Applications",
-      description: "Discover how to leverage AI to solve real business challenges",
-      startTime: new Date(2025, 3, 18, 10, 0),
-      endTime: new Date(2025, 3, 18, 12, 0),
-      location: "Innovation Hub, San Francisco",
-      attendees: 54,
-      isRsvp: false
-    },
-    {
-      id: 3,
-      title: "Networking Mixer: Founders & Investors",
-      description: "Connect with potential investors and other entrepreneurs",
-      startTime: new Date(2025, 3, 22, 18, 0),
-      endTime: new Date(2025, 3, 22, 21, 0),
-      location: "Startup Lounge, New York",
-      attendees: 112,
-      isRsvp: false
+  // Fetch events from API
+  const { data: events = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+    queryFn: async () => {
+      const response = await fetch('/api/events');
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      return response.json();
     }
-  ];
+  });
   
-  const pastEvents = [
-    {
-      id: 4,
-      title: "Product Market Fit Workshop",
-      description: "Interactive session on validating and achieving product market fit",
-      startTime: new Date(2025, 2, 25, 14, 0),
-      endTime: new Date(2025, 2, 25, 17, 0),
-      location: "Virtual (Zoom)",
-      attendees: 92,
-      isRsvp: true
-    },
-    {
-      id: 5,
-      title: "Pitch Perfect: Investor Presentation Masterclass",
-      description: "Learn how to create compelling investor pitches",
-      startTime: new Date(2025, 2, 18, 10, 0),
-      endTime: new Date(2025, 2, 18, 13, 0),
-      location: "Tech Campus, Austin",
-      attendees: 67,
-      isRsvp: true
+  // Fetch user's RSVP status for events
+  const { data: userRsvps = [], isLoading: isLoadingRsvps } = useQuery<{eventId: number}[]>({
+    queryKey: ['/api/events/rsvp', user.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/events/rsvp?userId=${user.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch RSVP status');
+      }
+      return response.json();
     }
-  ];
+  });
+  
+  // Process events into upcoming and past
+  const now = new Date();
+  const upcomingEvents = events
+    .filter(event => new Date(event.startTime) > now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    
+  const pastEvents = events
+    .filter(event => new Date(event.startTime) <= now)
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+  
+  // Check if user has RSVP'd to an event
+  const isRsvpd = (eventId: number) => {
+    return userRsvps.some(rsvp => rsvp.eventId === eventId);
+  };
   
   const formatEventDate = (startTime: Date, endTime: Date): string => {
     const options: Intl.DateTimeFormatOptions = { 
@@ -1317,6 +1306,102 @@ const EventsTab = ({ user }: EventsTabProps) => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
   
+  // Handle RSVP actions
+  const handleRsvp = async (eventId: number, action: 'add' | 'remove') => {
+    try {
+      const endpoint = `/api/events/${eventId}/rsvp`;
+      const method = action === 'add' ? 'POST' : 'DELETE';
+      
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId: user.id })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} RSVP`);
+      }
+      
+      // Refresh data
+      refetchEvents();
+      queryClient.invalidateQueries({ queryKey: ['/api/events/rsvp', user.id] });
+      
+      toast({
+        title: action === 'add' ? "Successfully RSVP'd" : "Cancelled RSVP",
+        description: action === 'add' 
+          ? "You're now registered for this event" 
+          : "You've been removed from the attendee list",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Admin event management
+  const handleEventAction = async (action: 'create' | 'update' | 'delete', eventData?: Partial<Event>) => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to manage events",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      let response;
+      
+      if (action === 'create' || action === 'update') {
+        const endpoint = action === 'create' 
+          ? '/api/events' 
+          : `/api/events/${selectedEvent?.id}`;
+        
+        const method = action === 'create' ? 'POST' : 'PUT';
+        
+        response = await fetch(endpoint, {
+          method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(eventData)
+        });
+      } else if (action === 'delete' && selectedEvent) {
+        response = await fetch(`/api/events/${selectedEvent.id}`, {
+          method: 'DELETE'
+        });
+      }
+      
+      if (!response || !response.ok) {
+        throw new Error(`Failed to ${action} event`);
+      }
+      
+      // Close dialogs and refresh data
+      setShowCreateDialog(false);
+      setShowEditDialog(false);
+      setSelectedEvent(null);
+      refetchEvents();
+      
+      toast({
+        title: `Event ${action === 'create' ? 'created' : action === 'update' ? 'updated' : 'deleted'} successfully`,
+        description: action === 'delete' 
+          ? "The event has been permanently removed" 
+          : "Your changes have been saved",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="upcoming" value={upcomingTab} onValueChange={setUpcomingTab}>
@@ -1325,116 +1410,361 @@ const EventsTab = ({ user }: EventsTabProps) => {
             <TabsTrigger value="upcoming">Upcoming Events</TabsTrigger>
             <TabsTrigger value="past">Past Events</TabsTrigger>
           </TabsList>
-          <Button>
-            <Calendar className="h-4 w-4 mr-2" />
-            Create Event
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Create Event
+            </Button>
+          )}
         </div>
         
         <TabsContent value="upcoming">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {upcomingEvents.map(event => (
-              <Card key={event.id} className="overflow-hidden">
-                <div className="bg-primary h-1"></div>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{event.title}</CardTitle>
-                      <CardDescription>{event.description}</CardDescription>
+          {isLoadingEvents ? (
+            <div className="text-center py-12">
+              <LoadingSpinner size="lg" />
+              <p className="text-muted-foreground mt-4">Loading events...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {upcomingEvents.map(event => (
+                <Card key={event.id} className="overflow-hidden">
+                  <div className="bg-primary h-1"></div>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>{event.title}</CardTitle>
+                        <CardDescription>{event.description}</CardDescription>
+                      </div>
+                      {daysUntil(new Date(event.startTime)) <= 3 && (
+                        <Badge variant="outline" className="border-orange-500 text-orange-500">
+                          {daysUntil(new Date(event.startTime)) === 0 ? "Today" : `${daysUntil(new Date(event.startTime))} days left`}
+                        </Badge>
+                      )}
                     </div>
-                    {daysUntil(event.startTime) <= 3 && (
-                      <Badge variant="outline" className="border-orange-500 text-orange-500">
-                        {daysUntil(event.startTime) === 0 ? "Today" : `${daysUntil(event.startTime)} days left`}
-                      </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>{formatEventDate(new Date(event.startTime), new Date(event.endTime))}</span>
+                    </div>
+                    <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                      <Pin className="h-4 w-4" />
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{event.attendees} attending</span>
+                    </div>
+                    
+                    {isAdmin && (
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setShowEditDialog(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            // Show confirm dialog
+                            if (window.confirm("Are you sure you want to delete this event?")) {
+                              handleEventAction('delete');
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatEventDate(event.startTime, event.endTime)}</span>
-                  </div>
-                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                    <Pin className="h-4 w-4" />
-                    <span>{event.location}</span>
-                  </div>
-                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{event.attendees} attending</span>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    className="w-full" 
-                    variant={event.isRsvp ? "outline" : "default"}
-                    onClick={() => {
-                      // Implementation will be added later
-                    }}
-                  >
-                    {event.isRsvp ? "Cancel RSVP" : "RSVP to Event"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-            
-            {upcomingEvents.length === 0 && (
-              <div className="col-span-full text-center py-12">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">No Upcoming Events</h3>
-                <p className="text-muted-foreground mb-6">
-                  Check back later for new events or create your own
-                </p>
-                <Button>Create Event</Button>
-              </div>
-            )}
-          </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className="w-full" 
+                      variant={isRsvpd(event.id) ? "outline" : "default"}
+                      onClick={() => handleRsvp(event.id, isRsvpd(event.id) ? 'remove' : 'add')}
+                      disabled={isLoadingRsvps}
+                    >
+                      {isRsvpd(event.id) ? "Cancel RSVP" : "RSVP to Event"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+              
+              {upcomingEvents.length === 0 && !isLoadingEvents && (
+                <div className="col-span-full text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No Upcoming Events</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Check back later for new events {isAdmin && "or create your own"}
+                  </p>
+                  {isAdmin && (
+                    <Button onClick={() => setShowCreateDialog(true)}>Create Event</Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="past">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pastEvents.map(event => (
-              <Card key={event.id} className="opacity-80">
-                <CardHeader>
-                  <CardTitle>{event.title}</CardTitle>
-                  <CardDescription>{event.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatEventDate(event.startTime, event.endTime)}</span>
-                  </div>
-                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                    <Pin className="h-4 w-4" />
-                    <span>{event.location}</span>
-                  </div>
-                  <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{event.attendees} attended</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm">
-                    View Recording
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    View Materials
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-            
-            {pastEvents.length === 0 && (
-              <div className="col-span-full text-center py-12">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">No Past Events</h3>
-                <p className="text-muted-foreground">
-                  You haven't attended any events yet
-                </p>
-              </div>
-            )}
-          </div>
+          {isLoadingEvents ? (
+            <div className="text-center py-12">
+              <LoadingSpinner size="lg" />
+              <p className="text-muted-foreground mt-4">Loading events...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pastEvents.map(event => (
+                <Card key={event.id} className="opacity-80">
+                  <CardHeader>
+                    <CardTitle>{event.title}</CardTitle>
+                    <CardDescription>{event.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>{formatEventDate(new Date(event.startTime), new Date(event.endTime))}</span>
+                    </div>
+                    <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                      <Pin className="h-4 w-4" />
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{event.attendees} attended</span>
+                    </div>
+                    
+                    {isAdmin && (
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            // Show confirm dialog
+                            if (window.confirm("Are you sure you want to delete this event?")) {
+                              handleEventAction('delete');
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    {event.recordingUrl && (
+                      <Button variant="outline" size="sm">
+                        View Recording
+                      </Button>
+                    )}
+                    {event.materialsUrl && (
+                      <Button variant="ghost" size="sm">
+                        View Materials
+                      </Button>
+                    )}
+                    {!event.recordingUrl && !event.materialsUrl && (
+                      <p className="text-xs text-muted-foreground">No materials available</p>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
+              
+              {pastEvents.length === 0 && !isLoadingEvents && (
+                <div className="col-span-full text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No Past Events</h3>
+                  <p className="text-muted-foreground">
+                    You haven't attended any events yet
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
+      
+      {/* Create Event Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+            <DialogDescription>
+              Fill out the form below to create a new event. All fields are required.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            
+            const title = formData.get('title') as string;
+            const description = formData.get('description') as string;
+            const location = formData.get('location') as string;
+            const startDateString = formData.get('startDate') as string;
+            const startTimeString = formData.get('startTime') as string;
+            const endDateString = formData.get('endDate') as string;
+            const endTimeString = formData.get('endTime') as string;
+            
+            // Parse dates
+            const startDate = new Date(`${startDateString}T${startTimeString}`);
+            const endDate = new Date(`${endDateString}T${endTimeString}`);
+            
+            handleEventAction('create', {
+              title,
+              description,
+              location,
+              startTime: startDate,
+              endTime: endDate,
+              attendees: 0,
+              isRsvp: false
+            });
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">Title</Label>
+                <Input id="title" name="title" className="col-span-3" required />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">Description</Label>
+                <Textarea id="description" name="description" className="col-span-3" required />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="location" className="text-right">Location</Label>
+                <Input id="location" name="location" className="col-span-3" required />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="startDate" className="text-right">Start Date</Label>
+                <div className="col-span-3 flex gap-2">
+                  <Input id="startDate" name="startDate" type="date" className="flex-1" required />
+                  <Input id="startTime" name="startTime" type="time" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="endDate" className="text-right">End Date</Label>
+                <div className="col-span-3 flex gap-2">
+                  <Input id="endDate" name="endDate" type="date" className="flex-1" required />
+                  <Input id="endTime" name="endTime" type="time" required />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Create Event</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Event Dialog */}
+      {selectedEvent && (
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="sm:max-w-[550px]">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+              <DialogDescription>
+                Make changes to the event details below.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              
+              const title = formData.get('title') as string;
+              const description = formData.get('description') as string;
+              const location = formData.get('location') as string;
+              const startDateString = formData.get('startDate') as string;
+              const startTimeString = formData.get('startTime') as string;
+              const endDateString = formData.get('endDate') as string;
+              const endTimeString = formData.get('endTime') as string;
+              
+              // Parse dates
+              const startDate = new Date(`${startDateString}T${startTimeString}`);
+              const endDate = new Date(`${endDateString}T${endTimeString}`);
+              
+              handleEventAction('update', {
+                id: selectedEvent.id,
+                title,
+                description,
+                location,
+                startTime: startDate,
+                endTime: endDate,
+                attendees: selectedEvent.attendees,
+                isRsvp: selectedEvent.isRsvp
+              });
+            }}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-title" className="text-right">Title</Label>
+                  <Input id="edit-title" name="title" className="col-span-3" defaultValue={selectedEvent.title} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-description" className="text-right">Description</Label>
+                  <Textarea id="edit-description" name="description" className="col-span-3" defaultValue={selectedEvent.description} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-location" className="text-right">Location</Label>
+                  <Input id="edit-location" name="location" className="col-span-3" defaultValue={selectedEvent.location} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-startDate" className="text-right">Start Date</Label>
+                  <div className="col-span-3 flex gap-2">
+                    <Input 
+                      id="edit-startDate" 
+                      name="startDate" 
+                      type="date" 
+                      className="flex-1" 
+                      defaultValue={new Date(selectedEvent.startTime).toISOString().split('T')[0]} 
+                      required 
+                    />
+                    <Input 
+                      id="edit-startTime" 
+                      name="startTime" 
+                      type="time" 
+                      defaultValue={new Date(selectedEvent.startTime).toTimeString().split(' ')[0].substring(0, 5)} 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-endDate" className="text-right">End Date</Label>
+                  <div className="col-span-3 flex gap-2">
+                    <Input 
+                      id="edit-endDate" 
+                      name="endDate" 
+                      type="date" 
+                      className="flex-1" 
+                      defaultValue={new Date(selectedEvent.endTime).toISOString().split('T')[0]} 
+                      required 
+                    />
+                    <Input 
+                      id="edit-endTime" 
+                      name="endTime" 
+                      type="time" 
+                      defaultValue={new Date(selectedEvent.endTime).toTimeString().split(' ')[0].substring(0, 5)} 
+                      required 
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
