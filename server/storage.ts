@@ -206,7 +206,13 @@ export class MemStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const now = new Date();
-    const newUser: User = { ...user, id, createdAt: now };
+    const newUser: User = { 
+      ...user, 
+      id, 
+      createdAt: now,
+      bio: user.bio || null,
+      profileImage: user.profileImage || null 
+    };
     this.usersMap.set(id, newUser);
     return newUser;
   }
@@ -234,7 +240,11 @@ export class MemStorage implements IStorage {
       id, 
       createdAt: now, 
       currentFunding: 0,
-      trendingScore: 0 
+      trendingScore: 0,
+      logo: startup.logo || null,
+      businessPlan: startup.businessPlan || null,
+      pitchDeck: startup.pitchDeck || null,
+      website: startup.website || null
     };
     this.startupsMap.set(id, newStartup);
     return newStartup;
@@ -276,8 +286,9 @@ export class MemStorage implements IStorage {
     if (newInvestment.status === 'approved' || newInvestment.status === 'released') {
       const startup = await this.getStartup(newInvestment.startupId);
       if (startup) {
+        const currentFunding = startup.currentFunding || 0;
         await this.updateStartup(startup.id, { 
-          currentFunding: startup.currentFunding + newInvestment.amount 
+          currentFunding: currentFunding + newInvestment.amount 
         });
       }
     }
@@ -296,8 +307,9 @@ export class MemStorage implements IStorage {
     if (status === 'approved' || status === 'released') {
       const startup = await this.getStartup(updatedInvestment.startupId);
       if (startup && (investment.status !== 'approved' && investment.status !== 'released')) {
+        const currentFunding = startup.currentFunding || 0;
         await this.updateStartup(startup.id, { 
-          currentFunding: startup.currentFunding + investment.amount 
+          currentFunding: currentFunding + investment.amount 
         });
       }
     }
@@ -324,7 +336,9 @@ export class MemStorage implements IStorage {
       id, 
       createdAt: now, 
       completed: false, 
-      completedAt: null 
+      completedAt: null,
+      dueDate: milestone.dueDate || null,
+      fundingAmount: milestone.fundingAmount || null
     };
     this.milestonesMap.set(id, newMilestone);
     return newMilestone;
@@ -430,7 +444,12 @@ export class MemStorage implements IStorage {
   async createEvent(event: InsertEvent): Promise<Event> {
     const id = this.eventIdCounter++;
     const now = new Date();
-    const newEvent: Event = { ...event, id, createdAt: now };
+    const newEvent: Event = { 
+      ...event, 
+      id, 
+      createdAt: now,
+      location: event.location || null
+    };
     this.eventsMap.set(id, newEvent);
     return newEvent;
   }
@@ -522,7 +541,13 @@ export class MemStorage implements IStorage {
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const id = this.notificationIdCounter++;
     const now = new Date();
-    const newNotification: Notification = { ...notification, id, createdAt: now, read: false };
+    const newNotification: Notification = { 
+      ...notification, 
+      id, 
+      createdAt: now, 
+      read: false,
+      relatedId: notification.relatedId || null
+    };
     this.notificationsMap.set(id, newNotification);
     return newNotification;
   }
@@ -615,8 +640,13 @@ export class MemStorage implements IStorage {
         if (a.isVerified && !b.isVerified) return -1;
         if (!a.isVerified && b.isVerified) return 1;
         
-        const aScore = a.upvotes - a.downvotes;
-        const bScore = b.upvotes - b.downvotes;
+        const aUpvotes = a.upvotes || 0;
+        const aDownvotes = a.downvotes || 0;
+        const bUpvotes = b.upvotes || 0;
+        const bDownvotes = b.downvotes || 0;
+        
+        const aScore = aUpvotes - aDownvotes;
+        const bScore = bUpvotes - bDownvotes;
         if (aScore !== bScore) return bScore - aScore;
         
         return a.createdAt.getTime() - b.createdAt.getTime();
@@ -667,27 +697,37 @@ export class MemStorage implements IStorage {
   async createDiscussionVote(vote: InsertDiscussionVote): Promise<DiscussionVote> {
     const id = this.discussionVoteIdCounter++;
     const now = new Date();
-    const newVote: DiscussionVote = { ...vote, id, createdAt: now };
+    const newVote: DiscussionVote = { 
+      ...vote, 
+      id, 
+      createdAt: now,
+      discussionId: vote.discussionId || null,
+      commentId: vote.commentId || null
+    };
     this.discussionVotesMap.set(id, newVote);
     
     // Update discussion or comment vote counts
     if (vote.discussionId && !vote.commentId) {
       const discussion = await this.getDiscussion(vote.discussionId);
       if (discussion) {
+        const upvotes = discussion.upvotes || 0;
+        const downvotes = discussion.downvotes || 0;
         const updatedDiscussion = { 
           ...discussion, 
-          upvotes: vote.voteType > 0 ? discussion.upvotes + 1 : discussion.upvotes,
-          downvotes: vote.voteType < 0 ? discussion.downvotes + 1 : discussion.downvotes
+          upvotes: vote.voteType > 0 ? upvotes + 1 : upvotes,
+          downvotes: vote.voteType < 0 ? downvotes + 1 : downvotes
         };
         this.discussionsMap.set(discussion.id, updatedDiscussion);
       }
     } else if (vote.commentId) {
       const comment = await this.getDiscussionComment(vote.commentId);
       if (comment) {
+        const upvotes = comment.upvotes || 0;
+        const downvotes = comment.downvotes || 0;
         const updatedComment = { 
           ...comment, 
-          upvotes: vote.voteType > 0 ? comment.upvotes + 1 : comment.upvotes,
-          downvotes: vote.voteType < 0 ? comment.downvotes + 1 : comment.downvotes
+          upvotes: vote.voteType > 0 ? upvotes + 1 : upvotes,
+          downvotes: vote.voteType < 0 ? downvotes + 1 : downvotes
         };
         this.discussionCommentsMap.set(comment.id, updatedComment);
       }
@@ -708,20 +748,24 @@ export class MemStorage implements IStorage {
     if (vote.discussionId && !vote.commentId) {
       const discussion = await this.getDiscussion(vote.discussionId);
       if (discussion) {
+        const upvotes = discussion.upvotes || 0;
+        const downvotes = discussion.downvotes || 0;
         const updatedDiscussion = { 
           ...discussion, 
-          upvotes: oldVoteType > 0 ? discussion.upvotes - 1 : voteType > 0 ? discussion.upvotes + 1 : discussion.upvotes,
-          downvotes: oldVoteType < 0 ? discussion.downvotes - 1 : voteType < 0 ? discussion.downvotes + 1 : discussion.downvotes
+          upvotes: oldVoteType > 0 ? upvotes - 1 : voteType > 0 ? upvotes + 1 : upvotes,
+          downvotes: oldVoteType < 0 ? downvotes - 1 : voteType < 0 ? downvotes + 1 : downvotes
         };
         this.discussionsMap.set(discussion.id, updatedDiscussion);
       }
     } else if (vote.commentId) {
       const comment = await this.getDiscussionComment(vote.commentId);
       if (comment) {
+        const upvotes = comment.upvotes || 0;
+        const downvotes = comment.downvotes || 0;
         const updatedComment = { 
           ...comment, 
-          upvotes: oldVoteType > 0 ? comment.upvotes - 1 : voteType > 0 ? comment.upvotes + 1 : comment.upvotes,
-          downvotes: oldVoteType < 0 ? comment.downvotes - 1 : voteType < 0 ? comment.downvotes + 1 : comment.downvotes
+          upvotes: oldVoteType > 0 ? upvotes - 1 : voteType > 0 ? upvotes + 1 : upvotes,
+          downvotes: oldVoteType < 0 ? downvotes - 1 : voteType < 0 ? downvotes + 1 : downvotes
         };
         this.discussionCommentsMap.set(comment.id, updatedComment);
       }
@@ -743,7 +787,12 @@ export class MemStorage implements IStorage {
   async createHackathonTeam(team: InsertHackathonTeam): Promise<HackathonTeam> {
     const id = this.hackathonTeamIdCounter++;
     const now = new Date();
-    const newTeam: HackathonTeam = { ...team, id, createdAt: now };
+    const newTeam: HackathonTeam = { 
+      ...team, 
+      id, 
+      createdAt: now,
+      logoUrl: team.logoUrl || null
+    };
     this.hackathonTeamsMap.set(id, newTeam);
     return newTeam;
   }
@@ -802,6 +851,17 @@ export class MemStorage implements IStorage {
     return updatedMember;
   }
   
+  async removeHackathonTeamMember(userId: number, teamId: number): Promise<void> {
+    // Find all members that match the criteria
+    const members = Array.from(this.hackathonTeamMembersMap.values())
+      .filter(member => member.userId === userId && member.teamId === teamId);
+    
+    // Remove all matched members
+    for (const member of members) {
+      this.hackathonTeamMembersMap.delete(member.id);
+    }
+  }
+  
   // Hackathon chat message methods
   async getHackathonChatMessage(id: number): Promise<HackathonChatMessage | undefined> {
     return this.hackathonChatMessagesMap.get(id);
@@ -835,7 +895,12 @@ export class MemStorage implements IStorage {
   async createBadge(badge: InsertBadge): Promise<Badge> {
     const id = this.badgeIdCounter++;
     const now = new Date();
-    const newBadge: Badge = { ...badge, id, awardedAt: now };
+    const newBadge: Badge = { 
+      ...badge, 
+      id, 
+      awardedAt: now,
+      iconUrl: badge.iconUrl || null
+    };
     this.badgesMap.set(id, newBadge);
     
     // Create a notification for the user
