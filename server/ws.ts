@@ -1,127 +1,191 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { storage } from './storage';
-import { messages } from '@shared/schema';
-import { log } from './vite';
-import { eq, or, and } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
-// Type definition for message payload
-interface MessagePayload {
+// Define message types
+interface BaseMessage {
+  type: string;
+  timestamp: number;
+}
+
+interface ChatMessage extends BaseMessage {
   type: 'message';
-  recipientId: number;
-  senderId: number;
-  content: string;
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  isRead: boolean;
 }
 
-// Type definition for mark-read payload
-interface MarkReadPayload {
-  type: 'mark-read';
-  messageId: number;
+interface TypingMessage extends BaseMessage {
+  type: 'typing';
+  roomId: string;
+  senderId: string;
+  isTyping: boolean;
 }
 
-// Type for all supported payloads
-type Payload = MessagePayload | MarkReadPayload;
+interface CallMessage extends BaseMessage {
+  type: 'call';
+  callId: string;
+  callerId: string;
+  callerName: string;
+  recipientId: string;
+  callType: 'audio' | 'video';
+  action: 'start' | 'answer' | 'end' | 'reject';
+  sdp?: string;
+  candidates?: RTCIceCandidate[];
+}
 
-// Map to store WebSocket connections for each user
-const userConnections = new Map<number, WebSocket>();
+interface ReadReceiptMessage extends BaseMessage {
+  type: 'read_receipt';
+  roomId: string;
+  messageIds: string[];
+  readerId: string;
+}
 
-// Set up WebSocket server
-export function setupWebSocketServer(server: Server) {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+type ServerMessage = ChatMessage | TypingMessage | CallMessage | ReadReceiptMessage;
+
+// Client connection tracking
+interface Client {
+  userId: string;
+  connection: WebSocket;
+}
+
+let clients: Client[] = [];
+
+// Initialize WebSocket server
+export function setupWebSocketServer(httpServer: Server): WebSocketServer {
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
   wss.on('connection', (ws: WebSocket) => {
-    let userId: number | null = null;
+    // New connection handler
+    console.log('New WebSocket connection established');
+    let userId = "";
     
-    log('WebSocket connection established', 'ws');
-    
-    // Handle message from client
-    ws.on('message', async (data: string) => {
+    ws.on('message', (data: string) => {
       try {
-        const payload = JSON.parse(data) as Payload;
+        const message = JSON.parse(data);
         
-        switch (payload.type) {
-          case 'message':
-            // Handle new message
-            if (!userId) {
-              userId = payload.senderId;
-              userConnections.set(userId, ws);
-              log(`User ${userId} registered WebSocket connection`, 'ws');
-            }
-            
-            // Store message in database
-            const newMessage = await storage.createMessage({
-              senderId: payload.senderId,
-              receiverId: payload.recipientId,
-              content: payload.content
-            });
-            
-            // Create notification
-            await storage.createNotification({
-              userId: payload.recipientId,
-              type: 'message',
-              content: `New message from ${(await storage.getUser(payload.senderId))?.name}`,
-              relatedId: newMessage.id
-            });
-            
-            // Send message to recipient if they're connected
-            const recipientWs = userConnections.get(payload.recipientId);
-            if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-              recipientWs.send(JSON.stringify({
-                type: 'new-message',
-                message: newMessage
-              }));
-              
-              log(`Message ${newMessage.id} delivered to user ${payload.recipientId}`, 'ws');
-            } else {
-              log(`Message ${newMessage.id} stored for offline user ${payload.recipientId}`, 'ws');
-            }
-            
-            // Confirm to sender
-            ws.send(JSON.stringify({
-              type: 'message-sent',
-              messageId: newMessage.id
-            }));
-            
-            break;
-            
-          case 'mark-read':
-            // Mark message as read
-            const updatedMessage = await storage.markMessageAsRead(payload.messageId);
-            
-            // Notify the original sender if they're online
-            if (updatedMessage) {
-              const senderWs = userConnections.get(updatedMessage.senderId);
-              if (senderWs && senderWs.readyState === WebSocket.OPEN) {
-                senderWs.send(JSON.stringify({
-                  type: 'message-read',
-                  messageId: updatedMessage.id
-                }));
-              }
-            }
-            
-            break;
-            
-          default:
-            log(`Unknown message type: ${(payload as any).type}`, 'ws');
+        // First message should be authentication
+        if (message.type === 'auth') {
+          userId = message.userId || `anonymous-${randomUUID()}`;
+          clients.push({ userId, connection: ws });
+          console.log(`User ${userId} authenticated`);
+          
+          // Send acknowledgement
+          ws.send(JSON.stringify({
+            type: 'auth_success',
+            userId,
+            timestamp: Date.now()
+          }));
+          return;
         }
+        
+        // For all other messages, user must be authenticated
+        if (!userId) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Authentication required',
+            timestamp: Date.now()
+          }));
+          return;
+        }
+        
+        // Process message based on type
+        processMessage(message, userId, ws);
+        
       } catch (error) {
-        log(`Error processing WebSocket message: ${error}`, 'ws');
+        console.error('Error processing WebSocket message:', error);
         ws.send(JSON.stringify({
           type: 'error',
-          message: 'Invalid message format'
+          message: 'Invalid message format',
+          timestamp: Date.now()
         }));
       }
     });
     
-    // Handle disconnect
     ws.on('close', () => {
       if (userId) {
-        userConnections.delete(userId);
-        log(`User ${userId} disconnected WebSocket`, 'ws');
+        console.log(`WebSocket connection closed for user ${userId}`);
+        clients = clients.filter(client => client.userId !== userId);
       }
     });
   });
   
-  log('WebSocket server initialized', 'ws');
   return wss;
+}
+
+// Message processing logic
+function processMessage(message: ServerMessage, senderId: string, senderWs: WebSocket) {
+  // Set timestamp and message ID if needed
+  message.timestamp = Date.now();
+  
+  if (message.type === 'message') {
+    const chatMessage = message as ChatMessage;
+    
+    // Add sender ID and message ID if not provided
+    chatMessage.senderId = chatMessage.senderId || senderId;
+    chatMessage.id = chatMessage.id || randomUUID();
+    
+    // Forward message to all clients in the same room
+    forwardToRoom(chatMessage.roomId, chatMessage);
+    
+    // Save to database would happen here in a real implementation
+  } 
+  else if (message.type === 'typing') {
+    const typingMessage = message as TypingMessage;
+    
+    // Add sender ID if not provided
+    typingMessage.senderId = typingMessage.senderId || senderId;
+    
+    // Forward typing indicator to all clients in the same room
+    forwardToRoom(typingMessage.roomId, typingMessage);
+  }
+  else if (message.type === 'call') {
+    const callMessage = message as CallMessage;
+    
+    // Add caller ID if not provided
+    if (callMessage.action === 'start') {
+      callMessage.callerId = callMessage.callerId || senderId;
+    }
+    
+    // Forward call signal to the specific recipient
+    const recipientWs = clients.find(client => client.userId === callMessage.recipientId)?.connection;
+    if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+      recipientWs.send(JSON.stringify(callMessage));
+    } else {
+      // If recipient is not connected, send error back to caller
+      senderWs.send(JSON.stringify({
+        type: 'error',
+        message: 'Recipient is not online',
+        relatedTo: callMessage,
+        timestamp: Date.now()
+      }));
+    }
+  }
+  else if (message.type === 'read_receipt') {
+    const readReceiptMessage = message as ReadReceiptMessage;
+    
+    // Add reader ID if not provided
+    readReceiptMessage.readerId = readReceiptMessage.readerId || senderId;
+    
+    // Forward read receipt to all clients in the same room
+    forwardToRoom(readReceiptMessage.roomId, readReceiptMessage);
+    
+    // Update read status in database would happen here in a real implementation
+  }
+}
+
+// Helper to forward messages to all clients in a room
+function forwardToRoom(roomId: string, message: ServerMessage) {
+  // In a real app, you would query which users are in the room
+  // For now, we broadcast to all connected clients as a simple implementation
+  const messageStr = JSON.stringify(message);
+  
+  clients.forEach(client => {
+    if (client.connection.readyState === WebSocket.OPEN) {
+      client.connection.send(messageStr);
+    }
+  });
 }

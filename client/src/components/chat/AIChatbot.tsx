@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useAI, MessageHistory } from "@/hooks/use-ai";
 import {
   Bot,
   Send,
@@ -20,6 +21,7 @@ import {
   Settings,
   ThumbsUp,
   ThumbsDown,
+  Loader2,
 } from "lucide-react";
 
 // Define the types for messages
@@ -78,6 +80,9 @@ export default function AIChatbot() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Use the AI hook
+  const { chatbotMutation, generateSuggestionsMutation, isLoading } = useAI();
+  
   // Auto scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -85,8 +90,47 @@ export default function AIChatbot() {
     }
   }, [messages, isTyping]);
   
+  // Convert messages to the format required by the AI API
+  const getMessageHistory = (): MessageHistory[] => {
+    return messages
+      .filter(msg => msg.id !== 'welcome') // Skip the welcome message
+      .map(msg => ({
+        role: isUserMessage(msg) ? 'user' : 'assistant',
+        content: msg.text
+      }));
+  };
+  
+  // Generate suggestions based on message history
+  const generateSuggestions = async () => {
+    if (messages.length < 2) return; // Need at least one exchange
+    
+    try {
+      const messageTexts = messages.map(msg => msg.text);
+      const suggestions = await generateSuggestionsMutation.mutateAsync(messageTexts);
+      
+      // Update the last bot message with new suggestions
+      setMessages(prev => {
+        const lastBotMessageIndex = [...prev].reverse().findIndex(msg => !isUserMessage(msg));
+        if (lastBotMessageIndex === -1) return prev;
+        
+        const actualIndex = prev.length - 1 - lastBotMessageIndex;
+        const updatedMessages = [...prev];
+        const lastBotMessage = updatedMessages[actualIndex] as BotMessage;
+        
+        updatedMessages[actualIndex] = {
+          ...lastBotMessage,
+          suggestions
+        };
+        
+        return updatedMessages;
+      });
+    } catch (error) {
+      console.error("Failed to generate suggestions:", error);
+    }
+  };
+  
   // Handle sending a message
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     
     const userMessage: UserMessage = {
@@ -102,44 +146,47 @@ export default function AIChatbot() {
     // Simulate bot typing
     setIsTyping(true);
     
-    // Simulate bot response after a delay (in a real app, this would be an API call)
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      // Get message history for context
+      const history = getMessageHistory();
       
-      // Dummy bot response based on input
-      let botResponse: BotMessage;
+      // Call the AI API
+      const response = await chatbotMutation.mutateAsync({
+        prompt: text,
+        history
+      });
       
-      if (text.toLowerCase().includes('pitch deck')) {
-        botResponse = {
-          type: 'bot',
-          id: `bot-${Date.now()}`,
-          text: "A great pitch deck should include: problem statement, solution, market opportunity, business model, traction, team, and funding ask. Keep it concise (10-12 slides) and visually appealing. Would you like me to review your specific pitch deck sections?",
-          timestamp: new Date(),
-          suggestions: ["Review my problem statement", "Help with market sizing", "Funding ask strategy"]
-        };
-      } else if (text.toLowerCase().includes('investor')) {
-        botResponse = {
-          type: 'bot',
-          id: `bot-${Date.now()}`,
-          text: "Finding the right investors starts with research. Look for those who've invested in your industry before. StartupMatch can help connect you with potential investors based on your startup's profile. Would you like me to help you optimize your investor profile?",
-          timestamp: new Date(),
-          links: [
-            { text: "Find investors on StartupMatch", url: "#/explore" },
-            { text: "How to approach investors", url: "#/resources/investors" }
-          ]
-        };
-      } else {
-        botResponse = {
-          type: 'bot',
-          id: `bot-${Date.now()}`,
-          text: "Thanks for your question. I'm here to help with startup and investment questions. Could you tell me more specifically what you're looking for assistance with?",
-          timestamp: new Date(),
-          suggestions: ["Startup valuation", "Finding co-founders", "Investor relations", "Legal advice"]
-        };
-      }
+      // Create bot response
+      const botResponse: BotMessage = {
+        type: 'bot',
+        id: `bot-${Date.now()}`,
+        text: response,
+        timestamp: new Date(),
+        suggestions: [] // Will be filled by generateSuggestions
+      };
       
       setMessages(prev => [...prev, botResponse]);
-    }, 1500);
+      
+      // Generate suggestions for the response
+      setTimeout(() => {
+        generateSuggestions();
+      }, 500);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      
+      // Fallback response in case of error
+      const errorResponse: BotMessage = {
+        type: 'bot',
+        id: `bot-${Date.now()}`,
+        text: "I'm sorry, I encountered an error processing your request. Please try again later.",
+        timestamp: new Date(),
+        suggestions: ["Try a different question", "Talk to a human", "Refresh the page"]
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
   };
   
   // Animation variants
@@ -316,7 +363,7 @@ export default function AIChatbot() {
                 <ScrollArea className="flex-1 p-3 max-h-[400px]">
                   {messages.map((message, index) => renderMessage(message, index))}
                   
-                  {isTyping && (
+                  {(isTyping || isLoading) && (
                     <div className="flex mb-4">
                       <Avatar className="h-8 w-8 mr-2 mt-1">
                         <AvatarFallback className="bg-primary text-primary-foreground">AI</AvatarFallback>
@@ -364,19 +411,20 @@ export default function AIChatbot() {
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       className="flex-1"
+                      disabled={isLoading}
                     />
                     <Button 
                       type="submit" 
                       size="icon"
-                      disabled={!inputValue.trim()}
+                      disabled={!inputValue.trim() || isLoading}
                     >
-                      <Send className="h-4 w-4" />
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
                   </form>
                   
                   <div className="mt-2 flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">
-                      <span className="hidden sm:inline">Powered by StartupMatch AI</span>
+                      <span className="hidden sm:inline">Powered by OpenAI</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7">

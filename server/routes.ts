@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { setupWebSocketServer } from "./ws";
 import { z } from "zod";
 import { db } from "./db";
+import { AIService } from "./ai-service";
 import { 
   insertStartupSchema, 
   insertInvestmentSchema, 
@@ -1033,10 +1034,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI API endpoints
+  app.post("/api/ai/chatbot", isAuthenticated, async (req, res) => {
+    try {
+      const { prompt, context, history } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ message: "Prompt is required" });
+      }
+      
+      const response = await AIService.generateResponse(
+        prompt, 
+        context || '', 
+        history || []
+      );
+      
+      res.json({ response });
+    } catch (error) {
+      console.error("Error in AI chatbot:", error);
+      res.status(500).json({ message: "AI service error" });
+    }
+  });
+  
+  app.post("/api/ai/generate-message", isAuthenticated, async (req, res) => {
+    try {
+      const { recipientName, purpose, additionalContext } = req.body;
+      
+      if (!recipientName || !purpose) {
+        return res.status(400).json({ 
+          message: "Required fields: recipientName, purpose (introduction, follow_up, pitch, investment_interest, or meeting_request)" 
+        });
+      }
+      
+      const message = await AIService.generateAutomatedMessage({
+        recipientName,
+        senderName: req.user!.name,
+        purpose: purpose as any,
+        additionalContext
+      });
+      
+      res.json({ message });
+    } catch (error) {
+      console.error("Error generating AI message:", error);
+      res.status(500).json({ message: "AI service error" });
+    }
+  });
+  
+  app.post("/api/ai/suggestions", isAuthenticated, async (req, res) => {
+    try {
+      const { messageHistory } = req.body;
+      
+      if (!messageHistory || !Array.isArray(messageHistory)) {
+        return res.status(400).json({ message: "Message history array is required" });
+      }
+      
+      const suggestions = await AIService.generateSuggestions(messageHistory);
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Error generating AI suggestions:", error);
+      res.status(500).json({ message: "AI service error" });
+    }
+  });
+  
+  app.post("/api/ai/analyze-pitch", isAuthenticated, async (req, res) => {
+    try {
+      const { pitchText } = req.body;
+      
+      if (!pitchText) {
+        return res.status(400).json({ message: "Pitch text is required" });
+      }
+      
+      const analysis = await AIService.analyzePitch(pitchText);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error analyzing pitch:", error);
+      res.status(500).json({ message: "AI service error" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Set up WebSocket server for real-time chat
-  setupWebSocketServer(httpServer);
+  const wss = setupWebSocketServer(httpServer);
+  console.log('WebSocket server initialized on path: /ws');
   
   return httpServer;
 }

@@ -14,6 +14,7 @@ import {
   Volume2,
   Maximize2,
   User,
+  Loader2,
 } from "lucide-react";
 
 interface VideoCallModalProps {
@@ -38,20 +39,60 @@ export default function VideoCallModal({
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [reaction, setReaction] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   
-  // Effect to handle call duration timer
+  // Effect to handle call setup
   useEffect(() => {
     if (!isOpen) return;
+    
+    // Simulate connection process
+    setIsConnecting(true);
+    setIsConnected(false);
+    
+    // In a real implementation, this would be where you'd set up WebRTC
+    const connectionTimer = setTimeout(() => {
+      setIsConnecting(false);
+      setIsConnected(true);
+      
+      // Set up local video stream
+      if (localVideoRef.current && navigator.mediaDevices) {
+        navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true })
+          .then(stream => {
+            if (localVideoRef.current) {
+              localVideoRef.current.srcObject = stream;
+            }
+          })
+          .catch(error => {
+            console.error("Error accessing media devices:", error);
+          });
+      }
+    }, 2000);
+    
+    return () => {
+      clearTimeout(connectionTimer);
+      
+      // Clean up media streams when component unmounts
+      if (localVideoRef.current && localVideoRef.current.srcObject) {
+        const stream = localVideoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isOpen, type]);
+  
+  // Effect to handle call duration timer
+  useEffect(() => {
+    if (!isOpen || !isConnected) return;
     
     const timer = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isOpen]);
+  }, [isOpen, isConnected]);
   
   // Format call duration to mm:ss
   const formatDuration = (seconds: number) => {
@@ -84,12 +125,27 @@ export default function VideoCallModal({
         <div className="relative w-full h-[600px] flex flex-col">
           {/* Main Video Area */}
           <div className="flex-1 bg-black/90 relative">
+            {/* Connecting state */}
+            {isConnecting && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                <h3 className="text-white text-lg font-medium">Connecting...</h3>
+                <p className="text-white/70 text-sm mt-2">Setting up secure connection</p>
+              </div>
+            )}
+            
             {/* Remote Video (Participant) */}
-            {type === 'video' && !isVideoOff && (
+            {isConnected && type === 'video' && !isVideoOff && (
               <div className="absolute inset-0 flex items-center justify-center">
                 {/* This would be a real video stream in production */}
                 <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-32 h-32 text-white/30" />
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <User className="w-32 h-32 text-white/30 absolute" />
                 </div>
                 
                 {/* Call duration display */}
@@ -115,7 +171,7 @@ export default function VideoCallModal({
             )}
             
             {/* Audio-only or video-off state */}
-            {(type === 'audio' || isVideoOff) && (
+            {isConnected && (type === 'audio' || isVideoOff) && (
               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                 <Avatar className="w-32 h-32">
                   <AvatarFallback className="text-4xl">
@@ -125,11 +181,16 @@ export default function VideoCallModal({
                     <AvatarImage src={participant.avatar} alt={participant.name} />
                   )}
                 </Avatar>
+                
+                {/* Call duration display for audio calls */}
+                <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                  {formatDuration(callDuration)}
+                </div>
               </div>
             )}
             
             {/* Local Video (Small) */}
-            {type === 'video' && !isVideoOff && (
+            {isConnected && type === 'video' && !isVideoOff && (
               <motion.div 
                 className="absolute bottom-4 right-4 w-40 h-30 bg-gray-800 rounded-lg overflow-hidden shadow-lg"
                 drag
@@ -142,9 +203,16 @@ export default function VideoCallModal({
                 whileDrag={{ scale: 1.05 }}
                 whileTap={{ scale: 1.05 }}
               >
-                {/* This would be your own video stream in production */}
+                {/* Local video stream */}
                 <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-white/30" />
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <User className="w-10 h-10 text-white/30 absolute" />
                 </div>
               </motion.div>
             )}
