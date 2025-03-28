@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 
 // UI Components
@@ -116,13 +117,38 @@ const DiscussionsTab = ({ user }) => {
   
   // Fetch discussions
   const { data: discussions, isLoading, error } = useQuery({
-    queryKey: ['/api/discussions'],
-    queryFn: () => fetch('/api/discussions').then(res => res.json())
+    queryKey: ['/api/discussions', selectedTag],
+    queryFn: () => {
+      const endpoint = selectedTag === 'all' 
+        ? '/api/discussions' 
+        : `/api/discussions?tag=${selectedTag}`;
+      return fetch(endpoint).then(res => {
+        if (!res.ok) throw new Error('Failed to fetch discussions');
+        return res.json();
+      });
+    }
   });
   
   const handleCreatePost = async (formData) => {
     try {
-      // Implementation will be added later
+      const response = await fetch('/api/discussions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          authorId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create discussion');
+      }
+
+      // Invalidate and refetch discussions
+      await queryClient.invalidateQueries({ queryKey: ['/api/discussions'] });
+      
       toast({
         title: "Post created successfully",
         description: "Your discussion has been published.",
@@ -155,51 +181,7 @@ const DiscussionsTab = ({ user }) => {
     );
   }
   
-  // Placeholder data until we connect to the API
-  const dummyDiscussions = [
-    {
-      id: 1,
-      title: "What metrics do investors look for in early-stage startups?",
-      content: "I'm preparing for my first investor meeting and would like to know what key metrics I should focus on presenting...",
-      authorId: 1,
-      author: { name: "Jane Cooper", username: "janecooper", profileImage: null },
-      tag: "investing",
-      isPinned: true,
-      upvotes: 24,
-      downvotes: 2,
-      isVerified: true,
-      createdAt: new Date(2025, 1, 15),
-      commentCount: 8
-    },
-    {
-      id: 2,
-      title: "Building a tech team as a non-technical founder",
-      content: "I'm struggling to find the right CTO and engineers for my startup. What's your advice on...",
-      authorId: 2,
-      author: { name: "Robert Fox", username: "robfox", profileImage: null },
-      tag: "startups",
-      isPinned: false,
-      upvotes: 18,
-      downvotes: 0,
-      isVerified: false,
-      createdAt: new Date(2025, 1, 18),
-      commentCount: 5
-    },
-    {
-      id: 3,
-      title: "Best frameworks for building MVPs quickly?",
-      content: "I need to validate my idea fast. What frameworks or tools would you recommend for...",
-      authorId: 3,
-      author: { name: "Wade Warren", username: "wadewarren", profileImage: null },
-      tag: "technology",
-      isPinned: false,
-      upvotes: 31,
-      downvotes: 3,
-      isVerified: false,
-      createdAt: new Date(2025, 1, 20),
-      commentCount: 12
-    }
-  ];
+  // Get discussions from API query
   
   const tags = [
     { id: "all", label: "All Topics" },
@@ -243,11 +225,11 @@ const DiscussionsTab = ({ user }) => {
         </div>
         
         <div className="space-y-4">
-          {dummyDiscussions.map(discussion => (
-            <DiscussionCard key={discussion.id} discussion={discussion} currentUser={user} />
-          ))}
-          
-          {dummyDiscussions.length === 0 && (
+          {filteredDiscussions && filteredDiscussions.length > 0 ? (
+            filteredDiscussions.map(discussion => (
+              <DiscussionCard key={discussion.id} discussion={discussion} currentUser={user} />
+            ))
+          ) : (
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">No discussions found. Be the first to start a conversation!</p>
@@ -397,9 +379,28 @@ const DiscussionCard = ({ discussion, currentUser }) => {
   const [score, setScore] = useState(discussion.upvotes - discussion.downvotes);
   const [userVote, setUserVote] = useState(null); // null, 'up', or 'down'
   
+  // Check if the user already has a vote on this discussion
+  useEffect(() => {
+    const fetchUserVote = async () => {
+      try {
+        const response = await fetch(`/api/discussions/${discussion.id}/vote?userId=${currentUser.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data) {
+            setUserVote(data.voteType === 1 ? 'up' : 'down');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user vote:', error);
+      }
+    };
+    
+    fetchUserVote();
+  }, [discussion.id, currentUser.id]);
+  
   const formatDate = (date) => {
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const diff = now.getTime() - new Date(date).getTime();
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     if (days > 0) return `${days}d ago`;
@@ -411,8 +412,50 @@ const DiscussionCard = ({ discussion, currentUser }) => {
     return `${minutes}m ago`;
   };
   
+  const voteMutation = useMutation({
+    mutationFn: async ({ discussionId, userId, voteType }) => {
+      const response = await fetch(`/api/discussions/${discussionId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          voteType,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit vote');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/discussions'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Vote failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
   const handleVote = (type) => {
-    // Implementation will be added later
+    const voteType = type === 'up' ? 1 : -1;
+    
+    // If user already voted the same way, they're removing their vote
+    const newVoteType = userVote === type ? 0 : voteType;
+    
+    voteMutation.mutate({
+      discussionId: discussion.id,
+      userId: currentUser.id,
+      voteType: newVoteType,
+    });
+    
+    // Optimistic UI update
     if (type === 'up' && userVote !== 'up') {
       setScore(prev => userVote === 'down' ? prev + 2 : prev + 1);
       setUserVote('up');
@@ -425,6 +468,7 @@ const DiscussionCard = ({ discussion, currentUser }) => {
       // Remove vote
       setScore(prev => type === 'up' ? prev - 1 : prev + 1);
       setUserVote(null);
+      toast({ title: "Vote removed" });
     }
   };
 

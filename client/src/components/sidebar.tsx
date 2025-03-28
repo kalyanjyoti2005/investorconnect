@@ -148,6 +148,12 @@ export default function Sidebar() {
               icon={<ArrowUpDown className="w-5 h-5" />} 
               label="Voting Panel" 
             />
+            
+            <NavItem 
+              href="/community" 
+              icon={<Users className="w-5 h-5" />} 
+              label="Community" 
+            />
 
             {!isInvestor && (
               <NavItem 
